@@ -1,0 +1,29 @@
+## Visual Studio y .NET
+.vs/
+[Bb]in/
+[Ob]j/
+out/
+*.user
+*.userosscache
+*.sln.docstates
+
+## Archivos de Configuración con Secretos y Cadenas de Conexión
+appsettings.Development.json
+appsettings.Production.json
+appsettings.Local.json
+*.secrets.json
+
+## Archivos de base de datos local y temporales
+*.mdf
+*.ldf
+*.log
+
+## Entornos de IDE y SO
+.idea/
+.vscode/
+*.suo
+*.user
+*.sln.docstates
+[Th]umbs.db
+ehthumbs.db
+Desktop.ini

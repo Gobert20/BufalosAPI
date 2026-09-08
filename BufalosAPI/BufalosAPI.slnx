@@ -1,0 +1,4 @@
+<Solution>
+  <Project Path="BufalosAPI.Tests/BufalosAPI.Tests.csproj" Id="b1b8299f-7173-47ec-81f0-596d05225ee0" />
+  <Project Path="BufalosAPI/BufalosAPI.csproj" />
+</Solution>
