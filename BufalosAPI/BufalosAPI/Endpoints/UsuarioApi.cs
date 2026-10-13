@@ -1,4 +1,4 @@
-﻿using System.IdentityModel.Tokens.Jwt;
+using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
 using BufalosAPI.Data;
@@ -15,16 +15,27 @@ namespace BufalosAPI.Endpoints
         {
             var usuarios = app.MapGroup("/api/v1/usuarios").WithTags("Usuarios");
 
-            // POST: Registro de usuario usando el DTO unificado
+            // POST: Registro de usuario
             usuarios.MapPost("/registro", async (RegistroRequest req, BufalosDbContext db, AuthService auth) =>
             {
+                if (string.IsNullOrWhiteSpace(req.NombreCompleto) || string.IsNullOrWhiteSpace(req.Correo) || string.IsNullOrWhiteSpace(req.Password))
+                {
+                    return Results.BadRequest(new { error = "Todos los campos obligatorios deben completarse." });
+                }
+
+                var yaExiste = await db.Usuarios.AnyAsync(u => u.Correo == req.Correo);
+                if (yaExiste)
+                {
+                    return Results.BadRequest(new { error = "El correo ya se encuentra registrado." });
+                }
+
                 var nuevoUsuario = new Usuario
                 {
-                    NombreCompleto = req.NombreCompleto,
-                    Correo = req.Correo,
+                    NombreCompleto = req.NombreCompleto.Trim(),
+                    Correo = req.Correo.Trim().ToLower(),
                     ContrasenaHash = auth.HashPassword(req.Password),
-                    Id_Rol = req.Id_Rol,
-                    FechaNacimiento = req.FechaNacimiento,
+                    Id_Rol = req.Id_Rol <= 0 ? 2 : req.Id_Rol, // Rol Cliente por defecto
+                    FechaNacimiento = req.FechaNacimiento == default ? DateTime.UtcNow.AddYears(-20) : req.FechaNacimiento,
                     EsVerificado = req.EsVerificado,
                     FechaCreacion = DateTime.UtcNow
                 };
@@ -32,36 +43,48 @@ namespace BufalosAPI.Endpoints
                 db.Usuarios.Add(nuevoUsuario);
                 await db.SaveChangesAsync();
 
-                return Results.Created($"/api/usuarios/{nuevoUsuario.Id_Usuario}", new
+                var rolObj = await db.Roles.FindAsync(nuevoUsuario.Id_Rol);
+
+                return Results.Created($"/api/v1/usuarios/{nuevoUsuario.Id_Usuario}", new
                 {
-                    nuevoUsuario.Id_Usuario,
-                    nuevoUsuario.NombreCompleto,
-                    nuevoUsuario.Correo,
-                    nuevoUsuario.Id_Rol
+                    id = nuevoUsuario.Id_Usuario,
+                    nombre = nuevoUsuario.NombreCompleto,
+                    correo = nuevoUsuario.Correo,
+                    rol = rolObj?.Nombre ?? "Cliente"
                 });
             });
 
-            // POST: Login y generación de Token JWT
+            // POST: Login con JWT y Rate Limiting
             usuarios.MapPost("/login", async (LoginRequest login, BufalosDbContext db, AuthService auth, IConfiguration config) =>
             {
+                if (string.IsNullOrWhiteSpace(login.Correo) || string.IsNullOrWhiteSpace(login.Password))
+                {
+                    return Results.BadRequest(new { error = "Debe proporcionar correo y contraseña." });
+                }
+
                 var usuario = await db.Usuarios
                     .Include(u => u.Rol)
-                    .FirstOrDefaultAsync(u => u.Correo == login.Correo);
+                    .FirstOrDefaultAsync(u => u.Correo.ToLower() == login.Correo.Trim().ToLower());
 
                 if (usuario is null || !auth.VerifyPassword(login.Password, usuario.ContrasenaHash))
+                {
                     return Results.Unauthorized();
+                }
+
+                var rolNombre = usuario.Rol?.Nombre ?? "Cliente";
 
                 var claims = new List<Claim>
                 {
                     new Claim(ClaimTypes.NameIdentifier, usuario.Id_Usuario.ToString()),
                     new Claim(ClaimTypes.Name, usuario.NombreCompleto),
                     new Claim(ClaimTypes.Email, usuario.Correo),
-                    new Claim(ClaimTypes.Role, usuario.Rol?.Nombre ?? "Cliente")
+                    new Claim(ClaimTypes.Role, rolNombre),
+                    new Claim("role", rolNombre)
                 };
 
-                var jwtKey = config["Jwt:Key"]!;
-                var jwtIssuer = config["Jwt:Issuer"]!;
-                var jwtAudience = config["Jwt:Audience"]!;
+                var jwtKey = config["Jwt:Key"] ?? "BufalosSuperSecretKey2026_ClaveMuySegura32Chars";
+                var jwtIssuer = config["Jwt:Issuer"] ?? "BufalosApi";
+                var jwtAudience = config["Jwt:Audience"] ?? "BufalosClient";
 
                 var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey));
                 var credenciales = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
@@ -70,16 +93,28 @@ namespace BufalosAPI.Endpoints
                     issuer: jwtIssuer,
                     audience: jwtAudience,
                     claims: claims,
-                    expires: DateTime.UtcNow.AddHours(2),
+                    expires: DateTime.UtcNow.AddHours(4),
                     signingCredentials: credenciales
                 );
 
-                return Results.Ok(new { token = new JwtSecurityTokenHandler().WriteToken(token) });
-            });
+                var tokenString = new JwtSecurityTokenHandler().WriteToken(token);
+
+                return Results.Ok(new
+                {
+                    token = tokenString,
+                    usuario = new
+                    {
+                        id = usuario.Id_Usuario,
+                        nombreCompleto = usuario.NombreCompleto,
+                        correo = usuario.Correo,
+                        rol = rolNombre
+                    }
+                });
+            })
+            .RequireRateLimiting("login-limiter");
         }
 
-        // DTOs para solicitudes limpias
-        record RegistroRequest(
+        public record RegistroRequest(
             string NombreCompleto,
             string Correo,
             string Password,
@@ -88,6 +123,6 @@ namespace BufalosAPI.Endpoints
             bool EsVerificado
         );
 
-        record LoginRequest(string Correo, string Password);
+        public record LoginRequest(string Correo, string Password);
     }
 }

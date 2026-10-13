@@ -1,39 +1,49 @@
-﻿namespace BufalosAPI.Middlewares
+namespace BufalosAPI.Middlewares
 {
     public class ErrorAndLoggingMiddleware
     {
         private readonly RequestDelegate _next;
         private readonly ILogger<ErrorAndLoggingMiddleware> _logger;
+        private readonly IHostEnvironment _env;
 
-        public ErrorAndLoggingMiddleware(RequestDelegate next, ILogger<ErrorAndLoggingMiddleware> logger)
+        public ErrorAndLoggingMiddleware(RequestDelegate next, ILogger<ErrorAndLoggingMiddleware> logger, IHostEnvironment env)
         {
             _next = next;
             _logger = logger;
+            _env = env;
         }
 
         public async Task InvokeAsync(HttpContext context)
         {
             try
             {
-                // Registra la petición entrante en la consola
-                _logger.LogInformation("HTTP {Method} {Path}", context.Request.Method, context.Request.Path);
+                // Registra la petición entrante de manera segura (sin volcar tokens ni contraseñas)
+                _logger.LogInformation("HTTP {Method} {Path} - RemoteIP: {IP}",
+                    context.Request.Method,
+                    context.Request.Path,
+                    context.Connection.RemoteIpAddress?.ToString() ?? "unknown");
 
                 await _next(context);
             }
             catch (Exception ex)
             {
-                // Captura cualquier falla imprevista y la devuelve como JSON 500
-                _logger.LogError(ex, "Error imprevisto en la API: {Message}", ex.Message);
+                // Registra la excepción completa en logs internos del servidor (sin exponerla al cliente)
+                _logger.LogError(ex, "Excepción no controlada procesando {Method} {Path}: {Message}",
+                    context.Request.Method,
+                    context.Request.Path,
+                    ex.Message);
 
                 context.Response.ContentType = "application/json";
                 context.Response.StatusCode = StatusCodes.Status500InternalServerError;
 
+                // OWASP API8:2023 Security Misconfiguration mitigation:
+                // No exponer nunca trazas ni ex.Message a clientes externos
                 var response = new
                 {
-                    status = 500,
+                    status = StatusCodes.Status500InternalServerError,
                     error = "InternalServerError",
-                    message = "Ocurrió un error inesperado en el servidor.",
-                    detail = ex.Message
+                    message = "Ha ocurrido un error interno procesando su solicitud. Por favor intente más tarde.",
+                    correlationId = context.TraceIdentifier
                 };
 
                 await context.Response.WriteAsJsonAsync(response);
