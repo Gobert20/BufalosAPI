@@ -1,7 +1,20 @@
-﻿.vs/
-[Bb]in/
-[Ob]j/
+# Visual Studio / .NET
+.vs/
+**/[Bb]in/
+**/[Ob]j/
 out/
 *.user
-appsettings.Development.json
 appsettings.Production.json
+
+# Node & Frontend
+**/node_modules/
+**/dist/
+**/.env.local
+**/.env.*.local
+frontend/test-results/
+frontend/playwright-report/
+*.log
+
+# Variables de entorno con secretos reales
+*.env
+!*.env.example
