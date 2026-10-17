@@ -33,7 +33,7 @@ Evidenciar el dominio técnico del estudiante sobre:
 ## 🎙️ Guion Paso a Paso para la Presentación
 
 ### Bloque 1: Introducción y Arquitectura (2 min)
-- **Saludo**: *"Buenos días/tardes profesor Enso Guidotti. Mi nombre es Cristóbal García y voy a presentar el Trabajo 2 correspondiente al consumo frontend, seguridad y accesibilidad de la plataforma Búfalos Táctico."*
+- **Saludo**: *"Buenos días/tardes profesor Enso Guidotti. Mi nombre es Goberto Parra y voy a presentar el Trabajo 2 correspondiente al consumo frontend, seguridad y accesibilidad de la plataforma Búfalos Táctico."*
 - **Caso de Negocio**: *"El sistema gestiona artículos tácticos, equipamiento militar y elementos de seguridad balística. Opera con el recurso principal 'Productos' y el recurso relacionado 'Categorías'."*
 - **Arquitectura Frontend**:
   - *"El frontend fue construido en **React 19** con **Vite** y **TypeScript**, estructurado en capas limpias y desacopladas:"*

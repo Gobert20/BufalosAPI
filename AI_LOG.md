@@ -3,7 +3,7 @@
 **Asignatura**: Lenguaje Programación Web II  
 **Docente**: Enso Guidotti  
 **Evaluación**: Trabajo 2 (Consumo de API RESTful y Seguridad)  
-**Estudiante**: Cristóbal García  
+**Estudiante**: Goberto Parra  
 **Fecha**: Octubre 2026  
 
 ---

@@ -4,6 +4,7 @@
 **Unidad Temática**: UT2: Consumo de APIs RESTful desde aplicaciones frontend y seguridad  
 **Docente**: Enso Guidotti  
 **Evaluación**: Trabajo 2 (100% Evaluación 2)  
+**Estudiante**: Goberto Parra  
 **Proyecto**: Búfalos Táctico - Plataforma de Gestión de Equipamiento y Catálogo RESTful  
 
 ---
