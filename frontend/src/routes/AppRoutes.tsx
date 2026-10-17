@@ -6,6 +6,7 @@ import { LoginPage } from '../pages/LoginPage';
 import { ProductosListPage } from '../pages/ProductosListPage';
 import { ProductoDetailPage } from '../pages/ProductoDetailPage';
 import { ProductoFormPage } from '../pages/ProductoFormPage';
+import { EstadisticasPage } from '../pages/EstadisticasPage';
 import { ForbiddenPage } from '../pages/ForbiddenPage';
 import { NotFoundPage } from '../pages/NotFoundPage';
 
@@ -22,6 +23,9 @@ export const AppRoutes: React.FC = () => {
         {/* Listado y detalle de productos accesibles */}
         <Route path="productos" element={<ProductosListPage />} />
         <Route path="productos/:id" element={<ProductoDetailPage />} />
+
+        {/* Panel de Estadísticas y Métricas */}
+        <Route path="estadisticas" element={<EstadisticasPage />} />
 
         {/* Rutas protegidas: Solo rol Admin */}
         <Route

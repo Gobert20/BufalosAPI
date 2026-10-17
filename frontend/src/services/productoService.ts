@@ -33,4 +33,9 @@ export const productoService = {
   async deleteProducto(id: number): Promise<void> {
     await apiClient.delete(`/productos/${id}`);
   },
+
+  async getEstadisticas(): Promise<import('../types/producto').EstadisticasResponse> {
+    const response = await apiClient.get<import('../types/producto').EstadisticasResponse>('/productos/estadisticas');
+    return response.data;
+  },
 };

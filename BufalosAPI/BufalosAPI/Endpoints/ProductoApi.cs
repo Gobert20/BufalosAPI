@@ -31,6 +31,82 @@ namespace BufalosAPI.Endpoints
                 return Results.Ok(lista);
             });
 
+            // GET: Estadísticas del inventario, ventas y categorías
+            productos.MapGet("/estadisticas", async (BufalosDbContext db) =>
+            {
+                var categorias = await db.Categorias.ToListAsync();
+                var productos = await db.Productos.ToListAsync();
+
+                var totalProductos = productos.Count;
+                var totalStock = productos.Sum(p => p.Stock);
+                var valorInventario = productos.Sum(p => p.Precio * p.Stock);
+                var stockBajoCount = productos.Count(p => p.Stock < 10);
+                var stockCriticoCount = productos.Count(p => p.Stock < 5);
+
+                var catDict = categorias.ToDictionary(c => c.Id_Categoria, c => c.Nombre);
+
+                var porCategoria = productos
+                    .GroupBy(p => p.Id_Categoria)
+                    .Select(g => new
+                    {
+                        idCategoria = g.Key,
+                        nombre = catDict.ContainsKey(g.Key) ? catDict[g.Key] : $"Categoría {g.Key}",
+                        totalProductos = g.Count(),
+                        stockTotal = g.Sum(p => p.Stock),
+                        valorInventario = g.Sum(p => p.Precio * p.Stock)
+                    })
+                    .OrderByDescending(c => c.valorInventario)
+                    .ToList();
+
+                var ventasPorProducto = await db.DetallePedidos
+                    .GroupBy(d => d.Id_Producto)
+                    .Select(g => new
+                    {
+                        idProducto = g.Key,
+                        cantidadVendida = g.Sum(x => x.Cantidad),
+                        totalRecaudado = g.Sum(x => x.Cantidad * x.PrecioUnitario)
+                    })
+                    .OrderByDescending(x => x.cantidadVendida)
+                    .Take(5)
+                    .ToListAsync();
+
+                var prodDict = productos.ToDictionary(p => p.Id_Producto, p => p.Nombre);
+
+                var topVendidos = ventasPorProducto.Select(v => new
+                {
+                    idProducto = v.idProducto,
+                    nombre = prodDict.ContainsKey(v.idProducto) ? prodDict[v.idProducto] : $"Producto #{v.idProducto}",
+                    cantidadVendida = v.cantidadVendida,
+                    totalRecaudado = v.totalRecaudado
+                }).ToList();
+
+                var alertasStock = productos
+                    .Where(p => p.Stock < 10)
+                    .OrderBy(p => p.Stock)
+                    .Take(10)
+                    .Select(p => new
+                    {
+                        idProducto = p.Id_Producto,
+                        nombre = p.Nombre,
+                        categoria = catDict.ContainsKey(p.Id_Categoria) ? catDict[p.Id_Categoria] : "General",
+                        stock = p.Stock,
+                        precio = p.Precio
+                    })
+                    .ToList();
+
+                return Results.Ok(new
+                {
+                    totalProductos,
+                    totalStock,
+                    valorInventario,
+                    stockBajoCount,
+                    stockCriticoCount,
+                    porCategoria,
+                    topVendidos,
+                    alertasStock
+                });
+            });
+
             // GET: Producto por ID
             productos.MapGet("/{id:int}", async (int id, BufalosDbContext db) =>
             {

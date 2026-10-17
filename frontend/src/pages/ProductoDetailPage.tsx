@@ -21,6 +21,7 @@ import { Badge } from '../components/ui/Badge';
 import { Button } from '../components/ui/Button';
 import { ConfirmDialog } from '../components/ui/ConfirmDialog';
 import { LoadingSkeleton } from '../components/ui/LoadingSkeleton';
+import { ProductImageCard } from '../components/ui/ProductImageCard';
 
 export const ProductoDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -134,6 +135,13 @@ export const ProductoDetailPage: React.FC = () => {
 
       {/* Tarjeta Principal de Detalle */}
       <article className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+        <ProductImageCard
+          nombre={producto.nombre}
+          categoriaId={producto.id_Categoria}
+          className="w-full h-64 sm:h-80"
+          aspectRatio="aspect-16/9"
+        />
+
         {/* Cabecera */}
         <div className="bg-slate-900 text-white p-6 sm:p-8">
           <div className="flex items-center justify-between gap-3 mb-3">
