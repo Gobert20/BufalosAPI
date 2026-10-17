@@ -71,15 +71,17 @@ namespace BufalosAPI.Endpoints
                     return Results.Unauthorized();
                 }
 
-                var rolNombre = usuario.Rol?.Nombre ?? "Cliente";
+                var rolDb = usuario.Rol?.Nombre ?? "Cliente";
+                var rolNormalizado = (rolDb.Equals("Administrador", StringComparison.OrdinalIgnoreCase) || rolDb.Equals("Admin", StringComparison.OrdinalIgnoreCase)) ? "Admin" : rolDb;
 
                 var claims = new List<Claim>
                 {
                     new Claim(ClaimTypes.NameIdentifier, usuario.Id_Usuario.ToString()),
                     new Claim(ClaimTypes.Name, usuario.NombreCompleto),
                     new Claim(ClaimTypes.Email, usuario.Correo),
-                    new Claim(ClaimTypes.Role, rolNombre),
-                    new Claim("role", rolNombre)
+                    new Claim(ClaimTypes.Role, rolNormalizado),
+                    new Claim(ClaimTypes.Role, rolDb),
+                    new Claim("role", rolNormalizado)
                 };
 
                 var jwtKey = config["Jwt:Key"] ?? "BufalosSuperSecretKey2026_ClaveMuySegura32Chars";
@@ -107,7 +109,7 @@ namespace BufalosAPI.Endpoints
                         id = usuario.Id_Usuario,
                         nombreCompleto = usuario.NombreCompleto,
                         correo = usuario.Correo,
-                        rol = rolNombre
+                        rol = rolNormalizado
                     }
                 });
             })

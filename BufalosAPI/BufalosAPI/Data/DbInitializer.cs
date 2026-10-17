@@ -20,6 +20,12 @@ namespace BufalosAPI.Data
                 context.SaveChanges();
             }
 
+            var adminRol = context.Roles.FirstOrDefault(r => r.Nombre == "Admin" || r.Nombre == "Administrador")
+                ?? context.Roles.First();
+            var clienteRol = context.Roles.FirstOrDefault(r => r.Nombre == "Cliente")
+                ?? context.Roles.Skip(1).FirstOrDefault()
+                ?? adminRol;
+
             // 2. Sembrado de Categorías (recurso relacionado)
             if (!context.Categorias.Any())
             {
@@ -32,36 +38,47 @@ namespace BufalosAPI.Data
                 context.SaveChanges();
             }
 
-            // 3. Sembrado de Usuarios (Admin y Cliente)
-            if (!context.Usuarios.Any())
+            // 3. Sembrado y sincronización de Usuarios Demo (Admin y Cliente)
+            var adminUser = context.Usuarios.FirstOrDefault(u => u.Correo == "admin@bufalos.cl");
+            if (adminUser is null)
             {
-                var adminRol = context.Roles.First(r => r.Nombre == "Admin");
-                var clienteRol = context.Roles.First(r => r.Nombre == "Cliente");
-
-                context.Usuarios.AddRange(
-                    new Usuario
-                    {
-                        NombreCompleto = "Administrador Búfalos",
-                        Correo = "admin@bufalos.cl",
-                        ContrasenaHash = auth.HashPassword("Admin123!"),
-                        Id_Rol = adminRol.Id_Rol,
-                        FechaNacimiento = new DateTime(1990, 1, 1),
-                        EsVerificado = true,
-                        FechaCreacion = DateTime.UtcNow
-                    },
-                    new Usuario
-                    {
-                        NombreCompleto = "Cliente Demostración",
-                        Correo = "cliente@bufalos.cl",
-                        ContrasenaHash = auth.HashPassword("Cliente123!"),
-                        Id_Rol = clienteRol.Id_Rol,
-                        FechaNacimiento = new DateTime(1998, 5, 12),
-                        EsVerificado = true,
-                        FechaCreacion = DateTime.UtcNow
-                    }
-                );
-                context.SaveChanges();
+                context.Usuarios.Add(new Usuario
+                {
+                    NombreCompleto = "Administrador Búfalos",
+                    Correo = "admin@bufalos.cl",
+                    ContrasenaHash = auth.HashPassword("Admin123!"),
+                    Id_Rol = adminRol.Id_Rol,
+                    FechaNacimiento = new DateTime(1990, 1, 1),
+                    EsVerificado = true,
+                    FechaCreacion = DateTime.UtcNow
+                });
             }
+            else
+            {
+                adminUser.ContrasenaHash = auth.HashPassword("Admin123!");
+                adminUser.Id_Rol = adminRol.Id_Rol;
+            }
+
+            var clienteUser = context.Usuarios.FirstOrDefault(u => u.Correo == "cliente@bufalos.cl");
+            if (clienteUser is null)
+            {
+                context.Usuarios.Add(new Usuario
+                {
+                    NombreCompleto = "Cliente Demostración",
+                    Correo = "cliente@bufalos.cl",
+                    ContrasenaHash = auth.HashPassword("Cliente123!"),
+                    Id_Rol = clienteRol.Id_Rol,
+                    FechaNacimiento = new DateTime(1998, 5, 12),
+                    EsVerificado = true,
+                    FechaCreacion = DateTime.UtcNow
+                });
+            }
+            else
+            {
+                clienteUser.ContrasenaHash = auth.HashPassword("Cliente123!");
+                clienteUser.Id_Rol = clienteRol.Id_Rol;
+            }
+            context.SaveChanges();
 
             // 4. Sembrado de Productos (recurso principal del caso de negocio)
             if (!context.Productos.Any())

@@ -22,7 +22,7 @@ builder.Services.AddDbContext<BufalosDbContext>(options =>
     else
     {
         var conn = builder.Configuration.GetConnectionString("DefaultConnection")
-            ?? "Server=.\\SQLEXPRESS;Database=Bufalos_DB;Trusted_Connection=True;TrustServerCertificate=True;MultipleActiveResultSets=true;";
+            ?? "Server=.;Database=Bufalos_DB;Trusted_Connection=True;TrustServerCertificate=True;MultipleActiveResultSets=true;";
         options.UseSqlServer(conn);
     }
 });
@@ -88,8 +88,8 @@ builder.Services.AddAuthentication(options =>
 // 6. Configurar Políticas de Autorización por Rol (OWASP API5)
 builder.Services.AddAuthorization(options =>
 {
-    options.AddPolicy("AdminOnly", policy => policy.RequireRole("Admin"));
-    options.AddPolicy("ClienteOrAdmin", policy => policy.RequireRole("Admin", "Cliente"));
+    options.AddPolicy("AdminOnly", policy => policy.RequireRole("Admin", "Administrador"));
+    options.AddPolicy("ClienteOrAdmin", policy => policy.RequireRole("Admin", "Administrador", "Cliente"));
 });
 
 // 7. OpenAPI / Scalar
