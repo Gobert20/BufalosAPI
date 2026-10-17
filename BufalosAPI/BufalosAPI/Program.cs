@@ -12,6 +12,12 @@ using Scalar.AspNetCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Configurar puertos explícitos de desarrollo (51800 HTTP y 51799 HTTPS)
+if (!builder.Environment.IsEnvironment("Testing"))
+{
+    builder.WebHost.UseUrls("http://localhost:51800", "https://localhost:51799");
+}
+
 // 1. Configurar Entity Framework con soporte para SQL Server y modo de prueba en memoria
 builder.Services.AddDbContext<BufalosDbContext>(options =>
 {
@@ -138,7 +144,10 @@ if (app.Environment.IsDevelopment())
     });
 }
 
-app.UseHttpsRedirection();
+if (!app.Environment.IsDevelopment())
+{
+    app.UseHttpsRedirection();
+}
 
 app.UseAuthentication();
 app.UseAuthorization();
