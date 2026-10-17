@@ -12,9 +12,9 @@
 | Suite de Pruebas | Entorno / Herramienta | Pruebas Totales | Exitosas | Fallidas | Estado |
 | :--- | :--- | :---: | :---: | :---: | :---: |
 | **Backend (Integración API)** | .NET 10 / xUnit / WebApplicationFactory | 6 | 6 | 0 | **100% PASS** |
-| **Frontend (Componentes UI)** | Vitest / React Testing Library | 9 | 9 | 0 | **100% PASS** |
+| **Frontend (Componentes y Páginas)** | Vitest / React Testing Library | 11 | 11 | 0 | **100% PASS** |
 | **Frontend (End-to-End)** | Playwright (Chromium) | 1 flujo completo | 1 | 0 | **100% PASS** |
-| **Total Global** | &mdash; | **16** | **16** | **0** | **100% PASS** |
+| **Total Global** | &mdash; | **18** | **18** | **0** | **100% PASS** |
 
 ---
 
@@ -63,30 +63,29 @@ npm test
 ### Registro de Salida de Consola (Output Real)
 ```
 > frontend@0.0.0 test
-> vitest run
+> vitest run --run
 
- RUN  v5.0.4 C:/Users/Alumnos/Desktop/Documents/Downloads/BufalosAPI/BufalosAPI/frontend
+ RUN  v5.0.4 C:/Users/admin/Downloads/BufalosAPI/frontend
 
- ✓ src/test/protectedRoute.test.tsx (3 tests) 67ms
-   ✓ ProtectedRoute Component (3)
-     ✓ redirige al login cuando el usuario no está autenticado
-     ✓ redirige a 403 cuando el usuario es Cliente pero la ruta requiere rol Admin
-     ✓ permite el acceso y renderiza el contenido cuando el usuario cuenta con el rol requerido
- ✓ src/test/crud.test.tsx (3 tests) 555ms
+ ✓ src/test/protectedRoute.test.tsx (3 tests) 72ms
+ ✓ src/test/estadisticas.test.tsx (2 tests) 284ms
+   ✓ EstadisticasPage Component (2)
+     ✓ renderiza correctamente las métricas y KPIs del catálogo
+     ✓ muestra mensaje de error cuando la API falla
+ ✓ src/test/crud.test.tsx (3 tests) 792ms
    ✓ CRUD Operaciones en ProductosListPage (3)
      ✓ lista correctamente los productos obtenidos desde la API (Operación READ)
      ✓ muestra mensaje accesible de estado vacío cuando no hay registros
      ✓ abre el diálogo accesible y confirma la eliminación de un producto (Operación DELETE)
- ✓ src/test/login.test.tsx (3 tests) 898ms
+ ✓ src/test/login.test.tsx (3 tests) 1070ms
    ✓ LoginPage Component (3)
      ✓ renderiza correctamente el formulario de login y sus elementos accesibles
      ✓ muestra errores de validación en cliente cuando los campos están vacíos
      ✓ ejecuta autenticación exitosa al enviar credenciales válidas
 
- Test Files  3 passed (3)
-      Tests  9 passed (9)
-   Start at  16:03:38
-   Duration  3.01s (environment 55%, tests 21%, import 14%, setup 7%, transform 2%, worker 1%)
+ Test Files  4 passed (4)
+      Tests  11 passed (11)
+   Duration  4.05s
 ```
 
 ### Detalle de las Pruebas de Componentes

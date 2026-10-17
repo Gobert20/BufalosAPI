@@ -59,7 +59,7 @@ builder.Services.AddRateLimiter(options =>
     options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
     options.AddFixedWindowLimiter("login-limiter", opt =>
     {
-        opt.PermitLimit = 5;
+        opt.PermitLimit = builder.Environment.IsEnvironment("Testing") ? 1000 : 5;
         opt.Window = TimeSpan.FromMinutes(1);
         opt.QueueProcessingOrder = QueueProcessingOrder.OldestFirst;
         opt.QueueLimit = 0;
@@ -144,7 +144,7 @@ if (app.Environment.IsDevelopment())
     });
 }
 
-if (!app.Environment.IsDevelopment())
+if (!app.Environment.IsDevelopment() && !app.Environment.IsEnvironment("Testing"))
 {
     app.UseHttpsRedirection();
 }

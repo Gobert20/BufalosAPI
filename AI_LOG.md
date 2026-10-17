@@ -102,6 +102,29 @@ A continuación se detallan los prompts relevantes utilizados a lo largo de las 
 
 ---
 
+---
+
+### Etapa 5: Mejoras Visuales, Categoría Airsoft, Modo Galería y Panel de Estadísticas
+
+#### Prompt 5.1: Solución de mojibake, expansión de catálogo e interfaz en cuadrícula
+> *"Hay bugs con el texto, viéndose cosas como 'Mochila MÃ©dica TÃ¡ctica Trauma Bag Trauma-Kit', 'Linterna Taser ElÃ©ctrica Policial Recargable', 'Pistola TraumÃ¡tica Revolver Ekol Viper 2.5"'. Revisa qué pasó y añade la opción de cambiar entre lista y cuadrícula corte galería con imágenes/símbolos por producto, selector de cantidad por página, agrega productos de airsoft y una pestaña de estadísticas de negocio (más vendidos, ganancias, stock)."*
+
+- **Respuesta de la IA**:
+  - Diagnosticó que la causa del mojibake fue la ejecución previa de scripts SQL bajo la página de códigos Windows-1252 sin codificación `UTF-8` ni literales `N'...'`.
+  - Creó la Categoría 5 "Airsoft y Réplicas" y sembró más de 36 nuevos productos tácticos con descripciones completas en UTF-8.
+  - Implementó el conmutador de vista (Galería/Cuadrícula vs. Lista/Tabla) en `ProductosListPage.tsx` con almacenamiento de preferencia en `localStorage`.
+  - Agregó el selector dinámico de elementos por página (6, 12, 24, 48 productos).
+  - Diseñó el helper `productImages.ts` y el componente `ProductImageCard.tsx` con imágenes tácticas optimizadas y símbolos por categoría.
+  - Creó el endpoint backend `GET /api/v1/productos/estadisticas` y la página frontend `EstadisticasPage.tsx` con KPIs de valorización total, unidades en bodega, barras de progreso por categoría, top vendidos y alertas de stock bajo.
+- **Qué se Aceptó**:
+  - La arquitectura completa del panel de estadísticas y el mapeo semántico de imágenes.
+  - La persistencia limpia en SQL Server con `N'...'` y ejecución con `sqlcmd -f 65001`.
+  - Las nuevas pruebas unitarias para `EstadisticasPage` alcanzando 11 tests pasando en Vitest.
+- **Qué se Corrigió / Descartó**:
+  - *Corrección en `Program.cs`*: Durante la ejecución de `BufalosAPI.Tests`, el middleware de redirección HTTPS (`UseHttpsRedirection`) provocaba que las peticiones de prueba redirigieran de HTTP a HTTPS, haciendo que HttpClient eliminara la cabecera `Authorization: Bearer` y devolviera 401 Unauthorized. Se ajustó `Program.cs` para deshabilitar la redirección HTTPS en el entorno `"Testing"` y elevar el umbral del RateLimiter a 1000 durante pruebas, logrando que el 100% de las pruebas del backend (6 de 6) pasen en verde.
+
+---
+
 ## 3. Síntesis y Reflexión del Uso de IA
 
 1. **Eficiencia en Boilerplate y Accesibilidad**: La IA permitió generar con rapidez la estructura inicial de componentes accesibles y atributos ARIA complejos (tales como trampas de foco y vinculación de `aria-describedby`), ahorrando tiempo en tareas repetitivas.
@@ -109,5 +132,6 @@ A continuación se detallan los prompts relevantes utilizados a lo largo de las 
    - Incompatibilidades de tipos entre Zod y React Hook Form.
    - Errores de identidad de columnas en SQL Server durante el seeding.
    - Colisiones de selectores en Testing Library por el diseño responsivo dual (móvil/escritorio).
+   - Conflicto de `UseHttpsRedirection` en pruebas de integración de .NET.
    - Ajustes de sintaxis en `TokenValidationParameters` de C#.
 3. **Dominio del Proyecto**: Todo el código resultante, su arquitectura y sus decisiones de diseño están completamente asimilados por el estudiante, quien se encuentra en plena capacidad de defender, modificar y explicar cada línea durante la exposición oral frente al docente.
