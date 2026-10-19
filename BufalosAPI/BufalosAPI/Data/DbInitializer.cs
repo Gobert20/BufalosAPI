@@ -30,10 +30,11 @@ namespace BufalosAPI.Data
             if (!context.Categorias.Any())
             {
                 context.Categorias.AddRange(
-                    new Categoria { Nombre = "Ropa Táctica" },
-                    new Categoria { Nombre = "Calzado y Botas" },
-                    new Categoria { Nombre = "Mochilas y Bolsos" },
-                    new Categoria { Nombre = "Protección y Seguridad" }
+                    new Categoria { Nombre = "Calzado y Vestuario Táctico" },
+                    new Categoria { Nombre = "Accesorios y Óptica" },
+                    new Categoria { Nombre = "Defensa Personal" },
+                    new Categoria { Nombre = "Parches y Personalización" },
+                    new Categoria { Nombre = "Airsoft y Réplicas" }
                 );
                 context.SaveChanges();
             }
@@ -83,10 +84,11 @@ namespace BufalosAPI.Data
             // 4. Sembrado de Productos (recurso principal del caso de negocio)
             if (!context.Productos.Any())
             {
-                var catRopa = context.Categorias.FirstOrDefault(c => c.Nombre == "Ropa Táctica")?.Id_Categoria ?? 1;
-                var catCalzado = context.Categorias.FirstOrDefault(c => c.Nombre == "Calzado y Botas")?.Id_Categoria ?? 2;
-                var catMochilas = context.Categorias.FirstOrDefault(c => c.Nombre == "Mochilas y Bolsos")?.Id_Categoria ?? 3;
-                var catProteccion = context.Categorias.FirstOrDefault(c => c.Nombre == "Protección y Seguridad")?.Id_Categoria ?? 4;
+                var catVestuario = context.Categorias.FirstOrDefault(c => c.Nombre == "Calzado y Vestuario Táctico")?.Id_Categoria ?? 1;
+                var catAccesorios = context.Categorias.FirstOrDefault(c => c.Nombre == "Accesorios y Óptica")?.Id_Categoria ?? 2;
+                var catDefensa = context.Categorias.FirstOrDefault(c => c.Nombre == "Defensa Personal")?.Id_Categoria ?? 3;
+                var catParches = context.Categorias.FirstOrDefault(c => c.Nombre == "Parches y Personalización")?.Id_Categoria ?? 4;
+                var catAirsoft = context.Categorias.FirstOrDefault(c => c.Nombre == "Airsoft y Réplicas")?.Id_Categoria ?? 5;
 
                 context.Productos.AddRange(
                     new Producto
@@ -95,7 +97,7 @@ namespace BufalosAPI.Data
                         Descripcion = "Chaqueta de combate impermeable con refuerzo en codos y múltiples bolsillos tácticos.",
                         Precio = 59990m,
                         Stock = 25,
-                        Id_Categoria = catRopa,
+                        Id_Categoria = catVestuario,
                         RestriccionEdad = 0,
                         RequierePermiso = false,
                         SoloPersonalAutorizado = false,
@@ -107,7 +109,7 @@ namespace BufalosAPI.Data
                         Descripcion = "Pantalón con costuras dobles, tratamiento repelente al agua y 8 compartimentos.",
                         Precio = 42990m,
                         Stock = 40,
-                        Id_Categoria = catRopa,
+                        Id_Categoria = catVestuario,
                         RestriccionEdad = 0,
                         RequierePermiso = false,
                         SoloPersonalAutorizado = false,
@@ -119,7 +121,7 @@ namespace BufalosAPI.Data
                         Descripcion = "Calzado ergonómico de alta resistencia para terrenos difíciles con suela antideslizante.",
                         Precio = 84990m,
                         Stock = 18,
-                        Id_Categoria = catCalzado,
+                        Id_Categoria = catVestuario,
                         RestriccionEdad = 0,
                         RequierePermiso = false,
                         SoloPersonalAutorizado = false,
@@ -131,7 +133,7 @@ namespace BufalosAPI.Data
                         Descripcion = "Mochila táctica con sistema MOLLE, correas acolchadas y compatibilidad con vejiga de agua.",
                         Precio = 49990m,
                         Stock = 30,
-                        Id_Categoria = catMochilas,
+                        Id_Categoria = catAccesorios,
                         RestriccionEdad = 0,
                         RequierePermiso = false,
                         SoloPersonalAutorizado = false,
@@ -143,7 +145,7 @@ namespace BufalosAPI.Data
                         Descripcion = "Chaleco de protección balística ajustable para personal de seguridad acreditado.",
                         Precio = 189990m,
                         Stock = 8,
-                        Id_Categoria = catProteccion,
+                        Id_Categoria = catDefensa,
                         RestriccionEdad = 18,
                         RequierePermiso = true,
                         SoloPersonalAutorizado = true,
@@ -155,11 +157,35 @@ namespace BufalosAPI.Data
                         Descripcion = "Guantes de cuero sintético y polímero resistente para máxima protección de manos.",
                         Precio = 22990m,
                         Stock = 50,
-                        Id_Categoria = catProteccion,
+                        Id_Categoria = catVestuario,
                         RestriccionEdad = 0,
                         RequierePermiso = false,
                         SoloPersonalAutorizado = false,
                         NumeroSerie = "BUF-GUA-006"
+                    },
+                    new Producto
+                    {
+                        Nombre = "Rifle Airsoft AEG M4 Carbine Blowback 380 FPS",
+                        Descripcion = "Réplica de asalto eléctrica con cuerpo metálico, selector de tiro y cargador hi-cap de 300 BBs.",
+                        Precio = 229990m,
+                        Stock = 12,
+                        Id_Categoria = catAirsoft,
+                        RestriccionEdad = 18,
+                        RequierePermiso = false,
+                        SoloPersonalAutorizado = false,
+                        NumeroSerie = "AIR-M4-001"
+                    },
+                    new Producto
+                    {
+                        Nombre = "Parche Moral PVC Bandera de Chile Táctica Velcro",
+                        Descripcion = "Parche engomado en relieve con velcro de alta adherencia para mochilas y gorros.",
+                        Precio = 5990m,
+                        Stock = 60,
+                        Id_Categoria = catParches,
+                        RestriccionEdad = 0,
+                        RequierePermiso = false,
+                        SoloPersonalAutorizado = false,
+                        NumeroSerie = "PAR-CHI-001"
                     }
                 );
                 context.SaveChanges();

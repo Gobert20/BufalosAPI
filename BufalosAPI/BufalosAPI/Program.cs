@@ -18,12 +18,13 @@ if (!builder.Environment.IsEnvironment("Testing"))
     builder.WebHost.UseUrls("http://localhost:51800", "https://localhost:51799");
 }
 
-// 1. Configurar Entity Framework con soporte para SQL Server y modo de prueba en memoria
+// 1. Configurar Entity Framework con soporte para SQL Server y modo en memoria (fallback para demostración)
 builder.Services.AddDbContext<BufalosDbContext>(options =>
 {
-    if (builder.Environment.IsEnvironment("Testing"))
+    var useInMemory = builder.Configuration.GetValue<bool>("UseInMemoryDatabase");
+    if (builder.Environment.IsEnvironment("Testing") || useInMemory)
     {
-        options.UseInMemoryDatabase("Bufalos_Testing_InMemory_Db");
+        options.UseInMemoryDatabase("Bufalos_InMemory_Db");
     }
     else
     {
