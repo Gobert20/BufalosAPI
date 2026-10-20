@@ -15,42 +15,95 @@ namespace BufalosAPI.Endpoints
         {
             var usuarios = app.MapGroup("/api/v1/usuarios").WithTags("Usuarios");
 
+            // GET: Listado de Roles disponibles para registro y asignación
+            usuarios.MapGet("/roles", async (BufalosDbContext db) =>
+            {
+                var roles = await db.Roles
+                    .Select(r => new
+                    {
+                        id_Rol = r.Id_Rol,
+                        nombre = r.Nombre
+                    })
+                    .ToListAsync();
+                return Results.Ok(roles);
+            });
+
             // POST: Registro de usuario
             usuarios.MapPost("/registro", async (RegistroRequest req, BufalosDbContext db, AuthService auth) =>
             {
                 if (string.IsNullOrWhiteSpace(req.NombreCompleto) || string.IsNullOrWhiteSpace(req.Correo) || string.IsNullOrWhiteSpace(req.Password))
                 {
-                    return Results.BadRequest(new { error = "Todos los campos obligatorios deben completarse." });
+                    return Results.BadRequest(new { error = "Nombre completo, correo y contraseña son obligatorios." });
                 }
 
-                var yaExiste = await db.Usuarios.AnyAsync(u => u.Correo == req.Correo);
+                if (req.Password.Length < 6)
+                {
+                    return Results.BadRequest(new { error = "La contraseña debe contener al menos 6 caracteres." });
+                }
+
+                var correoLimpio = req.Correo.Trim().ToLowerInvariant();
+                var yaExiste = await db.Usuarios.AnyAsync(u => u.Correo.ToLower() == correoLimpio);
                 if (yaExiste)
                 {
-                    return Results.BadRequest(new { error = "El correo ya se encuentra registrado." });
+                    return Results.BadRequest(new { error = "El correo electrónico ya se encuentra registrado." });
                 }
+
+                // Buscar y resolver el Rol asignado
+                Rol? rolAsignado = null;
+                if (req.Id_Rol.HasValue && req.Id_Rol.Value > 0)
+                {
+                    rolAsignado = await db.Roles.FirstOrDefaultAsync(r => r.Id_Rol == req.Id_Rol.Value);
+                }
+
+                if (rolAsignado == null && !string.IsNullOrWhiteSpace(req.Rol))
+                {
+                    var nombreRol = req.Rol.Trim();
+                    rolAsignado = await db.Roles.FirstOrDefaultAsync(r =>
+                        r.Nombre.ToLower() == nombreRol.ToLower() ||
+                        (nombreRol.ToLower() == "administrador" && r.Nombre.ToLower() == "admin") ||
+                        (nombreRol.ToLower() == "admin" && r.Nombre.ToLower() == "administrador") ||
+                        ((nombreRol.ToLower() == "tecnico" || nombreRol.ToLower() == "técnico") &&
+                         (r.Nombre.ToLower() == "tecnico" || r.Nombre.ToLower() == "técnico"))
+                    );
+                }
+
+                if (rolAsignado == null)
+                {
+                    // Fallback predeterminado al rol Cliente
+                    rolAsignado = await db.Roles.FirstOrDefaultAsync(r => r.Nombre == "Cliente")
+                        ?? await db.Roles.FirstOrDefaultAsync();
+                }
+
+                var rolIdFinal = rolAsignado?.Id_Rol ?? 2;
 
                 var nuevoUsuario = new Usuario
                 {
                     NombreCompleto = req.NombreCompleto.Trim(),
-                    Correo = req.Correo.Trim().ToLower(),
+                    Correo = correoLimpio,
                     ContrasenaHash = auth.HashPassword(req.Password),
-                    Id_Rol = req.Id_Rol <= 0 ? 2 : req.Id_Rol, // Rol Cliente por defecto
-                    FechaNacimiento = req.FechaNacimiento == default ? DateTime.UtcNow.AddYears(-20) : req.FechaNacimiento,
-                    EsVerificado = req.EsVerificado,
+                    Id_Rol = rolIdFinal,
+                    FechaNacimiento = req.FechaNacimiento.HasValue && req.FechaNacimiento.Value != default
+                        ? req.FechaNacimiento.Value
+                        : DateTime.UtcNow.AddYears(-20),
+                    EsVerificado = req.EsVerificado ?? true,
                     FechaCreacion = DateTime.UtcNow
                 };
 
                 db.Usuarios.Add(nuevoUsuario);
                 await db.SaveChangesAsync();
 
-                var rolObj = await db.Roles.FindAsync(nuevoUsuario.Id_Rol);
+                var rolNombreFinal = rolAsignado?.Nombre ?? "Cliente";
+                var rolNormalizado = (rolNombreFinal.Equals("Administrador", StringComparison.OrdinalIgnoreCase) || rolNombreFinal.Equals("Admin", StringComparison.OrdinalIgnoreCase))
+                    ? "Admin"
+                    : rolNombreFinal;
 
                 return Results.Created($"/api/v1/usuarios/{nuevoUsuario.Id_Usuario}", new
                 {
                     id = nuevoUsuario.Id_Usuario,
                     nombre = nuevoUsuario.NombreCompleto,
                     correo = nuevoUsuario.Correo,
-                    rol = rolObj?.Nombre ?? "Cliente"
+                    rol = rolNormalizado,
+                    id_Rol = nuevoUsuario.Id_Rol
                 });
             });
 
@@ -120,9 +173,10 @@ namespace BufalosAPI.Endpoints
             string NombreCompleto,
             string Correo,
             string Password,
-            int Id_Rol,
-            DateTime FechaNacimiento,
-            bool EsVerificado
+            int? Id_Rol,
+            string? Rol,
+            DateTime? FechaNacimiento,
+            bool? EsVerificado
         );
 
         public record LoginRequest(string Correo, string Password);

@@ -96,7 +96,8 @@ builder.Services.AddAuthentication(options =>
 builder.Services.AddAuthorization(options =>
 {
     options.AddPolicy("AdminOnly", policy => policy.RequireRole("Admin", "Administrador"));
-    options.AddPolicy("ClienteOrAdmin", policy => policy.RequireRole("Admin", "Administrador", "Cliente"));
+    options.AddPolicy("ClienteOrAdmin", policy => policy.RequireRole("Admin", "Administrador", "Cliente", "Técnico", "Tecnico"));
+    options.AddPolicy("TecnicoOrAdmin", policy => policy.RequireRole("Admin", "Administrador", "Técnico", "Tecnico"));
 });
 
 // 7. OpenAPI / Scalar
@@ -157,6 +158,9 @@ app.UseAuthorization();
 app.MapUsuarioApi();
 app.MapProductoApi();
 app.MapCategoriaApi();
+app.MapPedidoApi();
+app.MapServicioTecnicoApi();
+app.MapProveedorApi();
 
 app.Run();
 

@@ -4,12 +4,17 @@ import {
   AlertTriangle,
   ArrowLeft,
   BarChart3,
+  CheckCircle,
+  Clock,
   DollarSign,
+  FileText,
   Package,
   PieChart,
   RefreshCw,
   ShieldAlert,
   TrendingUp,
+  Truck,
+  Wrench,
 } from 'lucide-react';
 import { productoService } from '../services/productoService';
 import { EstadisticasResponse } from '../types/producto';
@@ -49,6 +54,22 @@ export const EstadisticasPage: React.FC = () => {
       currency: 'CLP',
       maximumFractionDigits: 0,
     }).format(amount);
+  };
+
+  const getBadgeEstadoTransaccion = (estado: string) => {
+    switch (estado) {
+      case 'Entregado':
+      case 'Finalizado':
+        return <Badge variant="emerald">{estado}</Badge>;
+      case 'EnviadoStarken':
+        return <Badge variant="blue">Enviado</Badge>;
+      case 'En Proceso':
+        return <Badge variant="amber">En Proceso</Badge>;
+      case 'Pendiente':
+      case 'Recibido':
+      default:
+        return <Badge variant="red">{estado}</Badge>;
+    }
   };
 
   if (isLoading) {
@@ -102,90 +123,194 @@ export const EstadisticasPage: React.FC = () => {
             Panel de Estadísticas y Negocio
           </h1>
           <p className="text-slate-600 text-sm mt-1">
-            Métricas operacionales en tiempo real, valorización de inventario, demanda y alertas de stock
+            Métricas comerciales en tiempo real, balance financiero consolidado y flujo de pedidos y servicios
           </p>
         </div>
 
-        <Button
-          variant="outline"
-          onClick={loadStats}
-          icon={<RefreshCw className="w-4 h-4" aria-hidden="true" />}
-          className="self-start sm:self-auto font-semibold"
-        >
-          Actualizar Datos
-        </Button>
+        <div className="flex items-center gap-2">
+          <Link to="/panel-tecnico">
+            <Button variant="outline" icon={<Wrench className="w-4 h-4" />}>
+              Ver Panel Técnico
+            </Button>
+          </Link>
+
+          <Button
+            variant="primary"
+            onClick={loadStats}
+            icon={<RefreshCw className="w-4 h-4" aria-hidden="true" />}
+            className="self-start sm:self-auto font-semibold"
+          >
+            Actualizar Datos
+          </Button>
+        </div>
       </div>
 
-      {/* 1. KPIs Principales en Cuadrícula */}
+      {/* 1. KPIs Principales en Cuadrícula (Contadores Globales y Facturación) */}
       <section aria-label="Indicadores Clave de Desempeño (KPIs)">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          {/* Tarjeta 1: Total Productos */}
-          <div className="bg-white rounded-xl border border-slate-200 p-5 shadow-xs flex items-center justify-between">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+          {/* Tarjeta 1: Total Facturado Consolidado */}
+          <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-xs flex items-center justify-between">
             <div>
               <span className="text-xs font-bold text-slate-500 uppercase tracking-wider block">
-                Catálogo Activo
+                Total Facturado
               </span>
-              <span className="text-3xl font-black text-slate-900 mt-1 block">
+              <span className="text-xl sm:text-2xl font-black text-emerald-700 mt-1 block tracking-tight">
+                {formatCLP(stats.totalFacturado ?? 0)}
+              </span>
+              <span className="text-[11px] text-slate-500 mt-0.5 block">
+                Ventas + Servicios
+              </span>
+            </div>
+            <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
+              <DollarSign className="w-5 h-5" aria-hidden="true" />
+            </div>
+          </div>
+
+          {/* Tarjeta 2: Pedidos de Clientes */}
+          <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-xs flex items-center justify-between">
+            <div>
+              <span className="text-xs font-bold text-slate-500 uppercase tracking-wider block">
+                Pedidos Clientes
+              </span>
+              <span className="text-2xl font-black text-slate-900 mt-1 block">
+                {stats.totalPedidos ?? 0}
+              </span>
+              <span className="text-[11px] text-amber-700 font-semibold mt-0.5 block">
+                {stats.pedidosPendientesCount ?? 0} pendientes
+              </span>
+            </div>
+            <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
+              <Truck className="w-5 h-5" aria-hidden="true" />
+            </div>
+          </div>
+
+          {/* Tarjeta 3: Órdenes de Taller Técnico */}
+          <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-xs flex items-center justify-between">
+            <div>
+              <span className="text-xs font-bold text-slate-500 uppercase tracking-wider block">
+                Taller y Servicios
+              </span>
+              <span className="text-2xl font-black text-slate-900 mt-1 block">
+                {stats.totalServicios ?? 0}
+              </span>
+              <span className="text-[11px] text-blue-700 font-semibold mt-0.5 block">
+                {stats.serviciosEnProcesoCount ?? 0} en proceso
+              </span>
+            </div>
+            <div className="w-10 h-10 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center shrink-0">
+              <Wrench className="w-5 h-5" aria-hidden="true" />
+            </div>
+          </div>
+
+          {/* Tarjeta 4: Total Productos Catálogo */}
+          <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-xs flex items-center justify-between">
+            <div>
+              <span className="text-xs font-bold text-slate-500 uppercase tracking-wider block">
+                Total Productos
+              </span>
+              <span className="text-2xl font-black text-slate-900 mt-1 block">
                 {stats.totalProductos}
               </span>
-              <span className="text-xs text-slate-500 mt-1 block">Modelos registrados</span>
+              <span className="text-[11px] text-slate-500 mt-0.5 block">
+                {stats.totalStock.toLocaleString('es-CL')} un. en stock
+              </span>
             </div>
-            <div className="w-12 h-12 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">
-              <Package className="w-6 h-6" aria-hidden="true" />
+            <div className="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0">
+              <Package className="w-5 h-5" aria-hidden="true" />
             </div>
           </div>
 
-          {/* Tarjeta 2: Stock Total */}
-          <div className="bg-white rounded-xl border border-slate-200 p-5 shadow-xs flex items-center justify-between">
+          {/* Tarjeta 5: Valorización Bodega */}
+          <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-xs flex items-center justify-between">
             <div>
               <span className="text-xs font-bold text-slate-500 uppercase tracking-wider block">
-                Stock Total Bodega
+                Valor Bodega
               </span>
-              <span className="text-3xl font-black text-slate-900 mt-1 block">
-                {stats.totalStock.toLocaleString('es-CL')}
-              </span>
-              <span className="text-xs text-slate-500 mt-1 block">Unidades físicas</span>
-            </div>
-            <div className="w-12 h-12 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
-              <TrendingUp className="w-6 h-6" aria-hidden="true" />
-            </div>
-          </div>
-
-          {/* Tarjeta 3: Valor del Inventario */}
-          <div className="bg-white rounded-xl border border-slate-200 p-5 shadow-xs flex items-center justify-between">
-            <div>
-              <span className="text-xs font-bold text-slate-500 uppercase tracking-wider block">
-                Valorización Stock
-              </span>
-              <span className="text-2xl font-black text-slate-900 mt-1 block tracking-tight">
+              <span className="text-xl sm:text-2xl font-black text-purple-700 mt-1 block tracking-tight">
                 {formatCLP(stats.valorInventario)}
               </span>
-              <span className="text-xs text-slate-500 mt-1 block">Valor comercial total</span>
-            </div>
-            <div className="w-12 h-12 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center">
-              <DollarSign className="w-6 h-6" aria-hidden="true" />
-            </div>
-          </div>
-
-          {/* Tarjeta 4: Alertas de Stock Bajo */}
-          <div className="bg-white rounded-xl border border-slate-200 p-5 shadow-xs flex items-center justify-between">
-            <div>
-              <span className="text-xs font-bold text-slate-500 uppercase tracking-wider block">
-                Alertas de Stock
+              <span className="text-[11px] text-slate-500 mt-0.5 block">
+                Inventario activo
               </span>
-              <span className="text-3xl font-black text-amber-600 mt-1 block">
-                {stats.stockBajoCount}
-              </span>
-              <span className="text-xs text-slate-500 mt-1 block">Productos con &lt; 10 un.</span>
             </div>
-            <div className="w-12 h-12 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center">
-              <ShieldAlert className="w-6 h-6" aria-hidden="true" />
+            <div className="w-10 h-10 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center shrink-0">
+              <DollarSign className="w-5 h-5" aria-hidden="true" />
             </div>
           </div>
         </div>
       </section>
 
-      {/* 2. Distribución de Inventario por Categoría */}
+      {/* 2. Sección: Últimas Transacciones Comerciales y Facturas (Requerimiento de Negocio) */}
+      <section
+        aria-labelledby="transacciones-titulo"
+        className="bg-white rounded-xl border border-slate-200 p-6 shadow-xs"
+      >
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 pb-4 mb-4">
+          <div className="flex items-center gap-2">
+            <FileText className="w-5 h-5 text-blue-700" aria-hidden="true" />
+            <h2 id="transacciones-titulo" className="text-lg font-bold text-slate-900">
+              Últimas Transacciones Comerciales y Facturas
+            </h2>
+          </div>
+          <span className="text-xs text-slate-500 font-medium">
+            Sincronizadas en tiempo real desde SQL Server
+          </span>
+        </div>
+
+        {!stats.ultimasTransacciones || stats.ultimasTransacciones.length === 0 ? (
+          <div className="py-8 text-center text-slate-500">
+            <Clock className="w-10 h-10 text-slate-300 mx-auto mb-2" />
+            <p className="text-sm">No hay transacciones comerciales recientes registradas.</p>
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-sm text-slate-700">
+              <thead className="bg-slate-50 text-xs uppercase font-extrabold text-slate-600 border-b border-slate-200">
+                <tr>
+                  <th scope="col" className="p-3"># Doc / Folio</th>
+                  <th scope="col" className="p-3">Concepto / Tipo</th>
+                  <th scope="col" className="p-3">Cliente</th>
+                  <th scope="col" className="p-3">Fecha</th>
+                  <th scope="col" className="p-3">Estado</th>
+                  <th scope="col" className="p-3 text-right">Monto Facturado</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {stats.ultimasTransacciones.map((t) => (
+                  <tr key={t.id} className="hover:bg-slate-50/70 transition-colors">
+                    <td className="p-3 font-mono font-bold text-slate-900 whitespace-nowrap">
+                      {t.id}
+                    </td>
+                    <td className="p-3 font-semibold text-slate-900">
+                      {t.tipo}
+                    </td>
+                    <td className="p-3 text-slate-700">
+                      {t.cliente}
+                    </td>
+                    <td className="p-3 text-xs text-slate-500 whitespace-nowrap">
+                      {new Date(t.fecha).toLocaleDateString('es-CL', {
+                        day: '2-digit',
+                        month: 'short',
+                        year: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit',
+                      })}
+                    </td>
+                    <td className="p-3 whitespace-nowrap">
+                      {getBadgeEstadoTransaccion(t.estado)}
+                    </td>
+                    <td className="p-3 text-right font-extrabold text-emerald-700 whitespace-nowrap">
+                      {formatCLP(t.monto)}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </section>
+
+      {/* 3. Distribución de Inventario por Categoría */}
       <section
         aria-labelledby="distribucion-titulo"
         className="bg-white rounded-xl border border-slate-200 p-6 shadow-xs"
@@ -255,7 +380,7 @@ export const EstadisticasPage: React.FC = () => {
         </div>
       </section>
 
-      {/* 3. Top Productos Más Vendidos y Alertas de Stock Urgente */}
+      {/* 4. Top Productos Más Vendidos y Alertas de Stock Urgente */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Top Vendidos */}
         <section

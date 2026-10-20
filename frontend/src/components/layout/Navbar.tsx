@@ -1,35 +1,63 @@
 import React, { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { BarChart3, LogIn, LogOut, Menu, Package, PlusCircle, Shield, User as UserIcon, X } from 'lucide-react';
+import {
+  BarChart3,
+  LogIn,
+  LogOut,
+  Menu,
+  Package,
+  PlusCircle,
+  Shield,
+  ShoppingBag,
+  User as UserIcon,
+  Wrench,
+  X,
+} from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 import { Badge } from '../ui/Badge';
+import { Button } from '../ui/Button';
 
 export const Navbar: React.FC = () => {
-  const { user, isAuthenticated, isAdmin, logout } = useAuth();
+  const { user, isAuthenticated, isAdmin, isTecnico, logout } = useAuth();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const location = useLocation();
 
   const isActive = (path: string) => location.pathname === path;
 
+  const canAccessTecnico = isAdmin || isTecnico;
+
+  const getRoleBadgeVariant = (rol: string): 'purple' | 'amber' | 'blue' => {
+    if (rol === 'Admin' || rol === 'Administrador') return 'purple';
+    if (rol === 'Técnico' || rol === 'Tecnico') return 'amber';
+    return 'blue';
+  };
+
   return (
-    <header role="banner" className="bg-slate-900 text-white shadow-md border-b border-slate-800 sticky top-0 z-40">
+    <header className="bg-slate-900 text-white shadow-md border-b border-slate-800 sticky top-0 z-40">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
-          {/* Logo y Enlace Principal */}
+          {/* Logo y Enlaces Principales */}
           <div className="flex items-center gap-8">
             <Link
               to="/productos"
-              className="flex items-center gap-2.5 text-white font-bold text-lg tracking-tight hover:text-blue-400 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400 rounded-md p-1 min-h-[44px]"
-              aria-label="Búfalos Táctico - Ir al catálogo"
+              className="flex items-center gap-2.5 group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400 rounded-md p-1"
+              aria-label="Búfalos Tactical - Inicio"
             >
-              <div className="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center text-white" aria-hidden="true">
-                <Shield className="w-5 h-5" />
+              <div className="w-9 h-9 rounded-lg bg-blue-600 flex items-center justify-center font-black text-xl text-yellow-400 group-hover:scale-105 transition-transform shadow-inner">
+                <Shield className="w-5 h-5 text-yellow-400" aria-hidden="true" />
               </div>
-              <span className="text-xl font-extrabold tracking-wide">BÚFALOS</span>
+              <div className="text-left">
+                <span className="text-lg font-black tracking-wider text-white uppercase block leading-none">
+                  Búfalos
+                </span>
+                <span className="text-[10px] font-bold tracking-widest text-yellow-400 uppercase block">
+                  Tactical &bull; Armería
+                </span>
+              </div>
             </Link>
 
             {/* Enlaces de Navegación de Escritorio */}
-            <nav role="navigation" aria-label="Navegación principal" className="hidden md:flex items-center gap-2">
+            <nav role="navigation" aria-label="Navegación principal" className="hidden md:flex items-center gap-1.5">
               <Link
                 to="/productos"
                 className={`flex items-center gap-2 px-3 py-2 rounded-md text-sm font-semibold transition-colors min-h-[44px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400 ${
@@ -42,18 +70,66 @@ export const Navbar: React.FC = () => {
                 Catálogo
               </Link>
 
-              <Link
-                to="/estadisticas"
-                className={`flex items-center gap-2 px-3 py-2 rounded-md text-sm font-semibold transition-colors min-h-[44px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400 ${
-                  isActive('/estadisticas')
-                    ? 'bg-blue-600 text-white shadow-xs'
-                    : 'text-slate-300 hover:text-white hover:bg-slate-800'
-                }`}
-              >
-                <BarChart3 className="w-4 h-4 text-cyan-400" aria-hidden="true" />
-                Estadísticas
-              </Link>
+              {/* Enlaces para Usuarios Autenticados (Cliente y demás) */}
+              {isAuthenticated && (
+                <>
+                  <Link
+                    to="/mis-pedidos"
+                    className={`flex items-center gap-2 px-3 py-2 rounded-md text-sm font-semibold transition-colors min-h-[44px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400 ${
+                      isActive('/mis-pedidos')
+                        ? 'bg-blue-600 text-white shadow-xs'
+                        : 'text-slate-300 hover:text-white hover:bg-slate-800'
+                    }`}
+                  >
+                    <ShoppingBag className="w-4 h-4 text-emerald-400" aria-hidden="true" />
+                    Mis Pedidos
+                  </Link>
 
+                  <Link
+                    to="/servicios-cliente"
+                    className={`flex items-center gap-2 px-3 py-2 rounded-md text-sm font-semibold transition-colors min-h-[44px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400 ${
+                      isActive('/servicios-cliente')
+                        ? 'bg-blue-600 text-white shadow-xs'
+                        : 'text-slate-300 hover:text-white hover:bg-slate-800'
+                    }`}
+                  >
+                    <Wrench className="w-4 h-4 text-amber-400" aria-hidden="true" />
+                    Servicio Técnico
+                  </Link>
+                </>
+              )}
+
+              {/* Panel de Estadísticas y Administración (Exclusivo Admin y Técnico) */}
+              {canAccessTecnico && (
+                <Link
+                  to="/estadisticas"
+                  className={`flex items-center gap-2 px-3 py-2 rounded-md text-sm font-semibold transition-colors min-h-[44px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400 ${
+                    isActive('/estadisticas')
+                      ? 'bg-blue-600 text-white shadow-xs'
+                      : 'text-slate-300 hover:text-white hover:bg-slate-800'
+                  }`}
+                >
+                  <BarChart3 className="w-4 h-4 text-cyan-400" aria-hidden="true" />
+                  Estadísticas / Admin
+                </Link>
+              )}
+
+              {/* Panel Técnico para Técnicos y Administradores */}
+              {canAccessTecnico && (
+                <Link
+                  to="/panel-tecnico"
+                  className={`flex items-center gap-2 px-3 py-2 rounded-md text-sm font-semibold transition-colors min-h-[44px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400 ${
+                    isActive('/panel-tecnico')
+                      ? 'bg-blue-600 text-white shadow-xs'
+                      : 'text-slate-300 hover:text-white hover:bg-slate-800'
+                  }`}
+                >
+                  <Wrench className="w-4 h-4 text-amber-400" aria-hidden="true" />
+                  Panel Técnico
+                </Link>
+              )}
+
+              {/* Botón de Creación: Exclusivo Admin */}
               {isAdmin && (
                 <Link
                   to="/productos/nuevo"
@@ -79,39 +155,38 @@ export const Navbar: React.FC = () => {
                 </div>
                 <div className="text-left text-xs">
                   <span className="block font-semibold text-slate-200 truncate max-w-[150px]">{user.nombreCompleto}</span>
-                  <Badge variant={isAdmin ? 'purple' : 'blue'} size="sm">
+                  <Badge variant={getRoleBadgeVariant(user.rol)} size="sm">
                     {user.rol}
                   </Badge>
                 </div>
-                <button
-                  type="button"
+                <Button
+                  variant="ghost"
                   onClick={logout}
                   aria-label="Cerrar sesión"
-                  className="ml-2 text-slate-400 hover:text-red-400 p-1.5 rounded-md hover:bg-slate-700/50 transition-colors cursor-pointer min-h-[44px] min-w-[44px] flex items-center justify-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400"
+                  className="p-1.5 min-h-[36px] min-w-[36px] text-slate-400 hover:text-red-400 hover:bg-slate-700/50"
                 >
-                  <LogOut className="w-5 h-5" aria-hidden="true" />
-                </button>
+                  <LogOut className="w-4 h-4" aria-hidden="true" />
+                </Button>
               </div>
             ) : (
               <Link
                 to="/login"
-                className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-bold hover:bg-blue-700 active:bg-blue-800 transition-colors shadow-xs min-h-[44px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400"
+                className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-bold min-h-[44px] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400 shadow-sm"
               >
                 <LogIn className="w-4 h-4" aria-hidden="true" />
-                Iniciar Sesión
+                <span>Iniciar Sesión</span>
               </Link>
             )}
           </div>
 
-          {/* Botón Menú Móvil */}
+          {/* Botón de Menú Hamburguesa Móvil */}
           <div className="flex md:hidden">
             <button
               type="button"
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              className="p-2.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 min-h-[44px] min-w-[44px] flex items-center justify-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400"
               aria-expanded={mobileMenuOpen}
-              aria-controls="mobile-nav"
               aria-label={mobileMenuOpen ? 'Cerrar menú principal' : 'Abrir menú principal'}
-              className="text-slate-300 hover:text-white p-2 rounded-lg hover:bg-slate-800 transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400"
             >
               {mobileMenuOpen ? (
                 <X className="w-6 h-6" aria-hidden="true" />
@@ -123,14 +198,9 @@ export const Navbar: React.FC = () => {
         </div>
       </div>
 
-      {/* Menú Móvil Desplegable */}
+      {/* Menú Desplegable Móvil */}
       {mobileMenuOpen && (
-        <nav
-          id="mobile-nav"
-          role="navigation"
-          aria-label="Navegación móvil"
-          className="md:hidden border-t border-slate-800 bg-slate-900 px-4 pt-3 pb-5 space-y-3 animate-in slide-in-from-top-2 duration-150"
-        >
+        <div className="md:hidden border-t border-slate-800 bg-slate-900 px-4 pt-3 pb-5 space-y-3">
           <div className="space-y-1">
             <Link
               to="/productos"
@@ -143,16 +213,57 @@ export const Navbar: React.FC = () => {
               Catálogo de Productos
             </Link>
 
-            <Link
-              to="/estadisticas"
-              onClick={() => setMobileMenuOpen(false)}
-              className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-base font-semibold min-h-[44px] ${
-                isActive('/estadisticas') ? 'bg-blue-600 text-white' : 'text-slate-300 hover:bg-slate-800'
-              }`}
-            >
-              <BarChart3 className="w-5 h-5 text-cyan-400" aria-hidden="true" />
-              Estadísticas y Negocio
-            </Link>
+            {isAuthenticated && (
+              <>
+                <Link
+                  to="/mis-pedidos"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-base font-semibold min-h-[44px] ${
+                    isActive('/mis-pedidos') ? 'bg-blue-600 text-white' : 'text-slate-300 hover:bg-slate-800'
+                  }`}
+                >
+                  <ShoppingBag className="w-5 h-5 text-emerald-400" aria-hidden="true" />
+                  Mis Pedidos y Compras
+                </Link>
+
+                <Link
+                  to="/servicios-cliente"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-base font-semibold min-h-[44px] ${
+                    isActive('/servicios-cliente') ? 'bg-blue-600 text-white' : 'text-slate-300 hover:bg-slate-800'
+                  }`}
+                >
+                  <Wrench className="w-5 h-5 text-amber-400" aria-hidden="true" />
+                  Servicio Técnico y Taller
+                </Link>
+              </>
+            )}
+
+            {canAccessTecnico && (
+              <Link
+                to="/estadisticas"
+                onClick={() => setMobileMenuOpen(false)}
+                className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-base font-semibold min-h-[44px] ${
+                  isActive('/estadisticas') ? 'bg-blue-600 text-white' : 'text-slate-300 hover:bg-slate-800'
+                }`}
+              >
+                <BarChart3 className="w-5 h-5 text-cyan-400" aria-hidden="true" />
+                Estadísticas / Admin
+              </Link>
+            )}
+
+            {canAccessTecnico && (
+              <Link
+                to="/panel-tecnico"
+                onClick={() => setMobileMenuOpen(false)}
+                className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-base font-semibold min-h-[44px] ${
+                  isActive('/panel-tecnico') ? 'bg-blue-600 text-white' : 'text-slate-300 hover:bg-slate-800'
+                }`}
+              >
+                <Wrench className="w-5 h-5 text-amber-400" aria-hidden="true" />
+                Panel Técnico
+              </Link>
+            )}
 
             {isAdmin && (
               <Link
@@ -176,34 +287,34 @@ export const Navbar: React.FC = () => {
                     <span className="block font-semibold text-slate-200 text-sm">{user.nombreCompleto}</span>
                     <span className="block text-xs text-slate-400">{user.correo}</span>
                   </div>
-                  <Badge variant={isAdmin ? 'purple' : 'blue'} size="sm">
+                  <Badge variant={getRoleBadgeVariant(user.rol)} size="sm">
                     {user.rol}
                   </Badge>
                 </div>
-                <button
-                  type="button"
+                <Button
+                  variant="outline"
                   onClick={() => {
-                    setMobileMenuOpen(false);
                     logout();
+                    setMobileMenuOpen(false);
                   }}
-                  className="w-full flex items-center justify-center gap-2 bg-red-800/80 hover:bg-red-800 text-white py-2.5 px-4 rounded-lg text-sm font-semibold min-h-[44px] transition-colors"
+                  className="w-full text-red-400 border-slate-700 hover:bg-slate-800 font-semibold"
+                  icon={<LogOut className="w-4 h-4" aria-hidden="true" />}
                 >
-                  <LogOut className="w-4 h-4" aria-hidden="true" />
                   Cerrar Sesión
-                </button>
+                </Button>
               </div>
             ) : (
               <Link
                 to="/login"
                 onClick={() => setMobileMenuOpen(false)}
-                className="w-full flex items-center justify-center gap-2 bg-blue-600 text-white py-2.5 px-4 rounded-lg text-base font-bold min-h-[44px]"
+                className="w-full flex items-center justify-center gap-2 bg-blue-600 text-white py-2.5 rounded-lg font-bold min-h-[44px]"
               >
                 <LogIn className="w-5 h-5" aria-hidden="true" />
-                Iniciar Sesión
+                <span>Iniciar Sesión</span>
               </Link>
             )}
           </div>
-        </nav>
+        </div>
       )}
     </header>
   );

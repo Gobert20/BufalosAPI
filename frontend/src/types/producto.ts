@@ -52,14 +52,28 @@ export interface AlertaStock {
   precio: number;
 }
 
+export interface TransaccionComercial {
+  id: string;
+  tipo: string;
+  cliente: string;
+  fecha: string;
+  monto: number;
+  estado: string;
+}
+
 export interface EstadisticasResponse {
   totalProductos: number;
   totalStock: number;
   valorInventario: number;
   stockBajoCount: number;
   stockCriticoCount: number;
+  totalFacturado?: number;
+  totalPedidos?: number;
+  pedidosPendientesCount?: number;
+  totalServicios?: number;
+  serviciosEnProcesoCount?: number;
   porCategoria: CategoriaEstadistica[];
   topVendidos: ProductoVendido[];
   alertasStock: AlertaStock[];
+  ultimasTransacciones?: TransaccionComercial[];
 }
-

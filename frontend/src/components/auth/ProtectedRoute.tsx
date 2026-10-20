@@ -6,7 +6,7 @@ import { LoadingSkeleton } from '../ui/LoadingSkeleton';
 
 interface ProtectedRouteProps {
   children?: React.ReactNode;
-  requiredRole?: RolNombre;
+  requiredRole?: RolNombre | RolNombre[];
 }
 
 export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
@@ -30,9 +30,20 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
-  // Si requiere un rol específico (e.g. Admin) y el usuario no lo posee, redirigir a 403
-  if (requiredRole && user?.rol !== requiredRole) {
-    return <Navigate to="/403" state={{ requiredRole, userRole: user?.rol }} replace />;
+  // Si requiere un rol específico (e.g. Admin o Técnico) y el usuario no lo posee, redirigir a 403
+  if (requiredRole) {
+    const rolesArray = Array.isArray(requiredRole) ? requiredRole : [requiredRole];
+    const userRole = user?.rol || '';
+    const hasRole = rolesArray.some((r) => {
+      if (r === userRole) return true;
+      if ((r === 'Admin' || r === 'Administrador') && (userRole === 'Admin' || userRole === 'Administrador')) return true;
+      if ((r === 'Técnico' || r === 'Tecnico') && (userRole === 'Técnico' || userRole === 'Tecnico')) return true;
+      return false;
+    });
+
+    if (!hasRole) {
+      return <Navigate to="/403" state={{ requiredRole: rolesArray.join(' o '), userRole: user?.rol }} replace />;
+    }
   }
 
   return <>{children}</>;

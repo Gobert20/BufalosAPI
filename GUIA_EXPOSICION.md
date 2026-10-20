@@ -46,6 +46,12 @@ Evidenciar el dominio técnico del estudiante sobre:
 
 ### Bloque 2: Demostración en Vivo: Autenticación y Roles (3 min)
 
+#### Paso 0: Registro de Nuevo Usuario por Rol (Pestaña "Crear Cuenta")
+1. En `/login`, hacer clic en la pestaña **"Crear Cuenta"**.
+2. Mostrar los campos validados con Zod: Nombre Completo, Correo Electrónico, Selector de Rol (`Cliente`, `Técnico`, `Administrador`) y Contraseñas.
+3. Explicar cómo la interfaz describe los permisos autorizados para cada rol seleccionado y cómo el backend almacena la relación con `TB_Roles`.
+4. Registrar un usuario de prueba o mostrar la transición automática con credenciales pre-cargadas al confirmar el registro.
+
 #### Paso 1: Ingreso como Cliente (Solo Lectura)
 1. Abrir el navegador en `http://localhost:5173/login`.
 2. Hacer clic en el botón de demostración **"Cargar Cliente"** (`cliente@bufalos.cl` / `Cliente123!`) y presionar "Ingresar al Sistema".

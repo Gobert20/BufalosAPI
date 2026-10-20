@@ -4,11 +4,10 @@ import {
   AlertTriangle,
   ArrowLeft,
   CheckCircle,
-  FileText,
   Lock,
   Package,
   Pencil,
-  Shield,
+  ShoppingBag,
   Tag,
   Trash2,
 } from 'lucide-react';
@@ -22,6 +21,7 @@ import { Button } from '../components/ui/Button';
 import { ConfirmDialog } from '../components/ui/ConfirmDialog';
 import { LoadingSkeleton } from '../components/ui/LoadingSkeleton';
 import { ProductImageCard } from '../components/ui/ProductImageCard';
+import { OrderModal } from '../components/orders/OrderModal';
 
 export const ProductoDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -34,6 +34,8 @@ export const ProductoDetailPage: React.FC = () => {
 
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isBuyModalOpen, setIsBuyModalOpen] = useState(false);
+  const [orderSuccessMsg, setOrderSuccessMsg] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchProducto = async () => {
@@ -67,6 +69,13 @@ export const ProductoDetailPage: React.FC = () => {
     } finally {
       setIsDeleting(false);
     }
+  };
+
+  const handleOrderSuccess = (pedidoId: number, _: number, cantidad: number) => {
+    setProducto((prev) => (prev ? { ...prev, stock: Math.max(0, prev.stock - cantidad) } : null));
+    setOrderSuccessMsg(
+      `¡Compra registrada con éxito! Folio #PED-${pedidoId.toString().padStart(5, '0')}. Notificación enviada al Panel Técnico.`
+    );
   };
 
   const formatPrice = (price: number) => {
@@ -104,7 +113,13 @@ export const ProductoDetailPage: React.FC = () => {
 
   return (
     <div className="max-w-3xl mx-auto space-y-6 text-left">
-      {/* Navegación y Acciones Superiores */}
+      {orderSuccessMsg && (
+        <Alert type="success" title="Pedido Exitoso" onClose={() => setOrderSuccessMsg(null)}>
+          {orderSuccessMsg}
+        </Alert>
+      )}
+
+      {/* Navegación y Botones de Acción */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <Link to="/productos">
           <Button variant="ghost" icon={<ArrowLeft className="w-4 h-4" />}>
@@ -112,25 +127,38 @@ export const ProductoDetailPage: React.FC = () => {
           </Button>
         </Link>
 
-        {isAdmin && (
-          <div className="flex items-center gap-2">
-            <Link to={`/productos/editar/${producto.id_Producto}`}>
+        <div className="flex items-center gap-2">
+          {/* Botón Comprar para Rol Cliente */}
+          <Button
+            variant="primary"
+            onClick={() => setIsBuyModalOpen(true)}
+            disabled={producto.stock <= 0}
+            className="bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 font-bold shadow-xs min-h-[44px]"
+            icon={<ShoppingBag className="w-4 h-4" aria-hidden="true" />}
+          >
+            {producto.stock > 0 ? 'Comprar / Realizar Pedido' : 'Sin Stock'}
+          </Button>
+
+          {isAdmin && (
+            <>
+              <Link to={`/productos/editar/${producto.id_Producto}`}>
+                <Button
+                  variant="outline"
+                  icon={<Pencil className="w-4 h-4 text-blue-600" />}
+                >
+                  Editar
+                </Button>
+              </Link>
               <Button
-                variant="outline"
-                icon={<Pencil className="w-4 h-4 text-blue-600" />}
+                variant="danger"
+                icon={<Trash2 className="w-4 h-4" />}
+                onClick={() => setIsConfirmOpen(true)}
               >
-                Editar
+                Eliminar
               </Button>
-            </Link>
-            <Button
-              variant="danger"
-              icon={<Trash2 className="w-4 h-4" />}
-              onClick={() => setIsConfirmOpen(true)}
-            >
-              Eliminar
-            </Button>
-          </div>
-        )}
+            </>
+          )}
+        </div>
       </div>
 
       {/* Tarjeta Principal de Detalle */}
@@ -163,7 +191,7 @@ export const ProductoDetailPage: React.FC = () => {
         {/* Contenido del Detalle */}
         <div className="p-6 sm:p-8 space-y-6">
           {/* Precio y Stock */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 p-4 rounded-xl bg-slate-50 border border-slate-200">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 p-4 rounded-xl bg-slate-50 border border-slate-200 items-center">
             <div>
               <span className="text-xs font-bold text-slate-500 uppercase tracking-wider block">
                 Precio Unitario
@@ -172,38 +200,36 @@ export const ProductoDetailPage: React.FC = () => {
                 {formatPrice(producto.precio)}
               </span>
             </div>
-            <div className="sm:text-right">
-              <span className="text-xs font-bold text-slate-500 uppercase tracking-wider block">
-                Disponibilidad en Bodega
-              </span>
-              <span
-                className={`text-xl font-bold inline-block mt-1 px-3 py-0.5 rounded-full ${
-                  producto.stock > 0
-                    ? 'bg-emerald-100 text-emerald-900'
-                    : 'bg-red-100 text-red-900'
-                }`}
-              >
-                {producto.stock} unidades en stock
-              </span>
+            <div className="sm:text-right flex flex-col sm:items-end gap-2">
+              <div>
+                <span className="text-xs font-bold text-slate-500 uppercase tracking-wider block">
+                  Disponibilidad en Bodega
+                </span>
+                <span
+                  className={`text-sm font-bold inline-block mt-1 px-3 py-0.5 rounded-full ${
+                    producto.stock > 0
+                      ? 'bg-emerald-100 text-emerald-900'
+                      : 'bg-red-100 text-red-900'
+                  }`}
+                >
+                  {producto.stock > 0 ? `${producto.stock} unidades disponibles` : 'Sin stock'}
+                </span>
+              </div>
             </div>
           </div>
 
           {/* Descripción */}
-          <div>
-            <h2 className="text-sm font-bold text-slate-700 uppercase tracking-wider mb-2 flex items-center gap-2">
-              <FileText className="w-4 h-4 text-blue-600" aria-hidden="true" />
-              Descripción del Producto
-            </h2>
-            <p className="text-slate-700 leading-relaxed text-base bg-white p-4 rounded-xl border border-slate-100 shadow-2xs">
-              {producto.descripcion || 'Sin descripción detallada registrada para este artículo.'}
+          <div className="space-y-2">
+            <h2 className="text-lg font-bold text-slate-900">Especificaciones y Descripción</h2>
+            <p className="text-slate-700 leading-relaxed text-sm sm:text-base">
+              {producto.descripcion || 'Sin descripción técnica disponible para este producto.'}
             </p>
           </div>
 
-          {/* Restricciones y Permisos */}
-          <div>
-            <h2 className="text-sm font-bold text-slate-700 uppercase tracking-wider mb-3 flex items-center gap-2">
-              <Shield className="w-4 h-4 text-blue-600" aria-hidden="true" />
-              Restricciones Legales y de Seguridad
+          {/* Ficha Técnica y Controles Legales */}
+          <div className="border-t border-slate-200 pt-6">
+            <h2 className="text-base font-bold text-slate-900 mb-4">
+              Restricciones Legales y Normativas
             </h2>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <div className="p-3 rounded-lg border border-slate-200 bg-slate-50/50">
@@ -252,6 +278,14 @@ export const ProductoDetailPage: React.FC = () => {
           </div>
         </div>
       </article>
+
+      {/* Modal para Realizar Compra Directa */}
+      <OrderModal
+        producto={producto}
+        isOpen={isBuyModalOpen}
+        onClose={() => setIsBuyModalOpen(false)}
+        onSuccess={handleOrderSuccess}
+      />
 
       {/* Diálogo de Eliminación */}
       <ConfirmDialog

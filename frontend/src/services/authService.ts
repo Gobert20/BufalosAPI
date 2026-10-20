@@ -1,5 +1,13 @@
 import { apiClient } from '../api/client';
-import { AuthResponse, DecodedToken, LoginCredentials, Usuario } from '../types/auth';
+import {
+  AuthResponse,
+  DecodedToken,
+  LoginCredentials,
+  RegistroRequest,
+  RegistroResponse,
+  RolDto,
+  Usuario,
+} from '../types/auth';
 
 const TOKEN_KEY = 'bufalos_auth_token';
 const USER_KEY = 'bufalos_auth_user';
@@ -8,6 +16,24 @@ export const authService = {
   async login(credentials: LoginCredentials): Promise<AuthResponse> {
     const response = await apiClient.post<AuthResponse>('/usuarios/login', credentials);
     return response.data;
+  },
+
+  async registro(data: RegistroRequest): Promise<RegistroResponse> {
+    const response = await apiClient.post<RegistroResponse>('/usuarios/registro', data);
+    return response.data;
+  },
+
+  async getRoles(): Promise<RolDto[]> {
+    try {
+      const response = await apiClient.get<RolDto[]>('/usuarios/roles');
+      return response.data;
+    } catch {
+      return [
+        { id_Rol: 2, nombre: 'Cliente' },
+        { id_Rol: 3, nombre: 'Técnico' },
+        { id_Rol: 1, nombre: 'Administrador' },
+      ];
+    }
   },
 
   getStoredToken(): string | null {

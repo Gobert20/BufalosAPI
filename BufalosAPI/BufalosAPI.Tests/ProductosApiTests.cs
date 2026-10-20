@@ -145,5 +145,39 @@ namespace BufalosAPI.Tests
             // Assert: Éxito 201 Created
             Assert.Equal(HttpStatusCode.Created, response.StatusCode);
         }
+
+        [Fact]
+        public async Task GetRoles_DevuelveHttp200OK()
+        {
+            // Act: Consultar roles disponibles
+            var response = await _client.GetAsync("/api/v1/usuarios/roles");
+
+            // Assert: 200 OK
+            Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+            var roles = await response.Content.ReadFromJsonAsync<List<JsonElement>>();
+            Assert.NotNull(roles);
+            Assert.True(roles.Count >= 2);
+        }
+
+        [Fact]
+        public async Task Registro_NuevoUsuarioConRolTecnico_DevuelveHttp201Created()
+        {
+            // Act: Registrar un nuevo usuario con rol Técnico
+            var payload = new
+            {
+                NombreCompleto = "Técnico Pruebas Unitarias",
+                Correo = $"tecnico_test_{Guid.NewGuid()}@bufalos.cl",
+                Password = "Password123!",
+                Rol = "Técnico"
+            };
+
+            var response = await _client.PostAsJsonAsync("/api/v1/usuarios/registro", payload);
+
+            // Assert: 201 Created
+            Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+            var json = await response.Content.ReadFromJsonAsync<JsonElement>();
+            Assert.True(json.TryGetProperty("rol", out var rolProp));
+            Assert.Equal("Técnico", rolProp.GetString());
+        }
     }
 }

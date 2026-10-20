@@ -15,8 +15,15 @@ namespace BufalosAPI.Data
             {
                 context.Roles.AddRange(
                     new Rol { Nombre = "Admin" },
-                    new Rol { Nombre = "Cliente" }
+                    new Rol { Nombre = "Cliente" },
+                    new Rol { Nombre = "Técnico" }
                 );
+                context.SaveChanges();
+            }
+
+            if (!context.Roles.Any(r => r.Nombre == "Técnico" || r.Nombre == "Tecnico"))
+            {
+                context.Roles.Add(new Rol { Nombre = "Técnico" });
                 context.SaveChanges();
             }
 
@@ -25,6 +32,7 @@ namespace BufalosAPI.Data
             var clienteRol = context.Roles.FirstOrDefault(r => r.Nombre == "Cliente")
                 ?? context.Roles.Skip(1).FirstOrDefault()
                 ?? adminRol;
+            var tecnicoRol = context.Roles.FirstOrDefault(r => r.Nombre == "Técnico" || r.Nombre == "Tecnico");
 
             // 2. Sembrado de Categorías (recurso relacionado)
             if (!context.Categorias.Any())
@@ -78,6 +86,29 @@ namespace BufalosAPI.Data
             {
                 clienteUser.ContrasenaHash = auth.HashPassword("Cliente123!");
                 clienteUser.Id_Rol = clienteRol.Id_Rol;
+            }
+
+            if (tecnicoRol != null)
+            {
+                var tecnicoUser = context.Usuarios.FirstOrDefault(u => u.Correo == "tecnico@bufalos.cl");
+                if (tecnicoUser is null)
+                {
+                    context.Usuarios.Add(new Usuario
+                    {
+                        NombreCompleto = "Técnico Especialista Búfalos",
+                        Correo = "tecnico@bufalos.cl",
+                        ContrasenaHash = auth.HashPassword("Tecnico123!"),
+                        Id_Rol = tecnicoRol.Id_Rol,
+                        FechaNacimiento = new DateTime(1993, 4, 15),
+                        EsVerificado = true,
+                        FechaCreacion = DateTime.UtcNow
+                    });
+                }
+                else
+                {
+                    tecnicoUser.ContrasenaHash = auth.HashPassword("Tecnico123!");
+                    tecnicoUser.Id_Rol = tecnicoRol.Id_Rol;
+                }
             }
             context.SaveChanges();
 
@@ -382,6 +413,185 @@ namespace BufalosAPI.Data
                 );
                 context.SaveChanges();
             }
+
+            // 5. Sembrado de Tipos de Servicio de Taller y Armería
+            if (!context.TiposServicio.Any())
+            {
+                context.TiposServicio.AddRange(
+                    new TipoServicio { Nombre = "Mantención Preventiva y Limpieza de Fusil/AEG", CostoBase = 25000m, TiempoEstimadoDias = 2 },
+                    new TipoServicio { Nombre = "Calibración de Miras Ópticas y Red Dot", CostoBase = 15000m, TiempoEstimadoDias = 1 },
+                    new TipoServicio { Nombre = "Reparación de Gearbox, Motor y Cambio de Resorte", CostoBase = 35000m, TiempoEstimadoDias = 3 },
+                    new TipoServicio { Nombre = "Bordado y Parches Tácticos Personalizados", CostoBase = 12000m, TiempoEstimadoDias = 2 },
+                    new TipoServicio { Nombre = "Ajuste de Holster y Funda Kydex a Medida", CostoBase = 18000m, TiempoEstimadoDias = 2 }
+                );
+                context.SaveChanges();
+            }
+
+            // 6. Sembrado de Pedidos iniciales para sincronización de paneles
+            if (!context.Pedidos.Any())
+            {
+                var cliente = context.Usuarios.FirstOrDefault(u => u.Correo == "cliente@bufalos.cl");
+                var primerProducto = context.Productos.FirstOrDefault();
+                if (cliente != null && primerProducto != null)
+                {
+                    var pedidoDemo = new Pedido
+                    {
+                        Id_Usuario = cliente.Id_Usuario,
+                        FechaPedido = DateTime.UtcNow.AddHours(-3),
+                        EstadoPedido = "Pendiente",
+                        MetodoEntrega = "Starken",
+                        DireccionEnvio = "Av. Providencia 1245, Depto 402, Santiago",
+                        Total = primerProducto.Precio * 2
+                    };
+                    context.Pedidos.Add(pedidoDemo);
+                    context.SaveChanges();
+
+                    context.DetallePedidos.Add(new DetallePedido
+                    {
+                        Id_Pedido = pedidoDemo.Id_Pedido,
+                        Id_Producto = primerProducto.Id_Producto,
+                        Cantidad = 2,
+                        PrecioUnitario = primerProducto.Precio
+                    });
+                    context.SaveChanges();
+                }
+            }
+
+            // 7. Sembrado de Órdenes de Servicio Técnico de demostración
+            if (!context.OrdenesServicio.Any())
+            {
+                var cliente = context.Usuarios.FirstOrDefault(u => u.Correo == "cliente@bufalos.cl");
+                var tecnico = context.Usuarios.FirstOrDefault(u => u.Correo == "tecnico@bufalos.cl");
+                var tipoServ = context.TiposServicio.FirstOrDefault();
+
+                if (cliente != null && tipoServ != null)
+                {
+                    context.OrdenesServicio.AddRange(
+                        new OrdenServicio
+                        {
+                            Id_Cliente = cliente.Id_Usuario,
+                            Id_TecnicoAsignado = tecnico?.Id_Usuario,
+                            Id_TipoServicio = tipoServ.Id_TipoServicio,
+                            FechaIngreso = DateTime.UtcNow.AddDays(-1),
+                            FechaEstimadaEntrega = DateTime.UtcNow.AddDays(2),
+                            Estado = "En Proceso",
+                            DescripcionProblemaOrItem = "Fusil M4 AEG con pérdida de compresión en hop-up y lubricación de engranajes.",
+                            CostoTotal = tipoServ.CostoBase + 5000m
+                        },
+                        new OrdenServicio
+                        {
+                            Id_Cliente = cliente.Id_Usuario,
+                            Id_TecnicoAsignado = tecnico?.Id_Usuario,
+                            Id_TipoServicio = tipoServ.Id_TipoServicio,
+                            FechaIngreso = DateTime.UtcNow.AddDays(-3),
+                            FechaEstimadaEntrega = DateTime.UtcNow.AddDays(-1),
+                            Estado = "Finalizado",
+                            DescripcionProblemaOrItem = "Bordado de 6 parches tácticos de velcro con escudo de Búfalos e indicativo de grupo sanguíneo O+.",
+                            CostoTotal = 24000m
+                        }
+                    );
+                    context.SaveChanges();
+                }
+            }
+            // 8. Sembrado de Proveedores (TB_Proveedores - Trabajo y Base de Datos)
+            if (!context.Proveedores.Any())
+            {
+                context.Proveedores.AddRange(
+                    new Proveedor
+                    {
+                        NombreEmpresa = "Suministros Tácticos SpA",
+                        Contacto = "Roberto Fernández",
+                        Telefono = "+56912345678",
+                        Correo = "contacto@suministrostacticos.cl"
+                    },
+                    new Proveedor
+                    {
+                        NombreEmpresa = "Importadora Defensiva S.A.",
+                        Contacto = "Andrea Morales",
+                        Telefono = "+56987654321",
+                        Correo = "ventas@defensiva.cl"
+                    },
+                    new Proveedor
+                    {
+                        NombreEmpresa = "Bordados y Textil Ltda.",
+                        Contacto = "Gonzalo Soto",
+                        Telefono = "+56955554444",
+                        Correo = "contacto@bordadostextil.cl"
+                    }
+                );
+                context.SaveChanges();
+            }
+
+            // 9. Sembrado de Proveedores-Productos (TB_ProveedoresProductos)
+            if (!context.ProveedoresProductos.Any())
+            {
+                var prov1 = context.Proveedores.FirstOrDefault();
+                var prods = context.Productos.Take(5).ToList();
+                if (prov1 != null && prods.Any())
+                {
+                    foreach (var prod in prods)
+                    {
+                        context.ProveedoresProductos.Add(new ProveedorProducto
+                        {
+                            Id_Proveedor = prov1.Id_Proveedor,
+                            Id_Producto = prod.Id_Producto
+                        });
+                    }
+                    context.SaveChanges();
+                }
+            }
+
+            // 10. Sembrado de Permisos y Licencias de Usuarios (TB_PermisosUsuarios)
+            if (!context.PermisosUsuarios.Any())
+            {
+                var cliente = context.Usuarios.FirstOrDefault(u => u.Correo == "cliente@bufalos.cl");
+                var admin = context.Usuarios.FirstOrDefault(u => u.Correo == "admin@bufalos.cl");
+
+                if (cliente != null)
+                {
+                    context.PermisosUsuarios.Add(new PermisoUsuario
+                    {
+                        Id_Usuario = cliente.Id_Usuario,
+                        TipoPermiso = "Acreditación Balística y Defensa",
+                        NumeroDocumento = "DGMN-CH-88492",
+                        FechaExpiracion = DateTime.UtcNow.AddYears(2),
+                        Estado = "Aprobado"
+                    });
+                }
+
+                if (admin != null)
+                {
+                    context.PermisosUsuarios.Add(new PermisoUsuario
+                    {
+                        Id_Usuario = admin.Id_Usuario,
+                        TipoPermiso = "Licencia de Armero y Distribuidor",
+                        NumeroDocumento = "ARM-SCL-0012",
+                        FechaExpiracion = DateTime.UtcNow.AddYears(3),
+                        Estado = "Aprobado"
+                    });
+                }
+                context.SaveChanges();
+            }
+
+            // 11. Sembrado de Detalles de Parches Personalizados (TB_DetallesParchesCustom)
+            if (!context.DetallesParchesCustom.Any())
+            {
+                var ordenBordado = context.OrdenesServicio.FirstOrDefault(o => o.DescripcionProblemaOrItem.Contains("parches"));
+                if (ordenBordado != null)
+                {
+                    context.DetallesParchesCustom.Add(new DetalleParcheCustom
+                    {
+                        Id_OrdenServicio = ordenBordado.Id_OrdenServicio,
+                        TextoPersonalizado = "BÚFALOS TACTICAL O+",
+                        Dimensiones = "8x5 cm",
+                        TipoBordado = "Velcro Mil-Spec Alta Densidad",
+                        Cantidad = 6,
+                        ObservacionesDiseno = "Fondo coyote con letras en negro mate y ribete perimetral."
+                    });
+                    context.SaveChanges();
+                }
+            }
+
         }
     }
 }

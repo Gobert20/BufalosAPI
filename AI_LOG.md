@@ -125,6 +125,50 @@ A continuación se detallan los prompts relevantes utilizados a lo largo de las 
 
 ---
 
+### Etapa 6: Registro de Usuarios en Login con Selección de Rol (Cliente, Técnico, Administrador)
+
+#### Prompt 6.1: Creación de Cuentas por Rol en Login y Persistencia Backend
+> *"En la pantalla de Login (/login), agrega un formulario o pestaña de 'Registro de Nuevo Usuario'. Permite seleccionar el Rol deseado (Cliente, Técnico, Administrador) durante el registro. Conecta el registro con el endpoint POST /api/v1/usuarios/registro del backend, guardando correctamente el nuevo usuario con el RolId correspondiente en SQL Server."*
+
+- **Respuesta de la IA**:
+  - Implementó un sistema accesible de pestañas (Tabs WAI-ARIA) en `LoginPage.tsx` permitiendo alternar fluidamente entre "Iniciar Sesión" y "Crear Cuenta".
+  - Añadió un formulario con validación síncrona en Zod (`registerSchema`), controlando nombre completo, correo con formato válido, coincidencia de contraseñas y selector de rol.
+  - Diseñó una caja explicativa contextual que describe los permisos autorizados en la armería según el rol seleccionado (`Cliente`, `Técnico` o `Administrador`).
+  - Actualizó `UsuarioApi.cs` incorporando el endpoint `GET /api/v1/usuarios/roles` y perfeccionando `POST /api/v1/usuarios/registro` para mapear el rol dinámicamente tanto por identificador (`Id_Rol`) como por nombre textual, asignando la clave foránea adecuada en `TB_Usuarios`.
+  - Aseguró en `DbInitializer.cs` la existencia de los 3 roles en base de datos y la creación de un usuario demo técnico (`tecnico@bufalos.cl` / `Tecnico123!`), con botón de acceso rápido en el login.
+- **Qué se Aceptó**:
+  - La arquitectura desacoplada en `authService.registro` y `authService.getRoles`.
+  - El flujo de UX donde, tras un registro exitoso, se notifica al usuario con un banner de confirmación y se pre-cargan sus credenciales en el login para un ingreso inmediato.
+  - La ampliación de la suite de pruebas unitarias alcanzando 13 tests en Vitest y 8 tests en .NET (100% en verde).
+- **Qué se Corrigió / Descartó**:
+  - *Ajuste en TypeScript*: Se definió `isTecnico?: boolean` como opcional en `AuthContextType` para mantener compatibilidad total con los mocks existentes en `crud.test.tsx` y `protectedRoute.test.tsx`.
+  - *Ajuste en Iconos*: Se retiró la prop personalizada `icon` de `<Alert>` en `LoginPage.tsx` para ajustarse estrictamente a la interfaz `AlertProps`, aprovechando el icono nativo del tipo `success`.
+
+---
+
+---
+
+### Etapa 7: Flujo Completo de Pedidos, Paneles Sincronizados, Perfil de Cliente y Mapeo Total de Base de Datos
+
+#### Prompt 7.1: Flujo de Pedidos, Sincronización de Paneles y Restricción por Rol
+> *"Implementa el flujo completo de compras para el Cliente con descuento de stock, sincronización inmediata con el Panel Técnico (despachos y taller) y Panel Admin (balance y transacciones). En el rol Cliente, bloquea el acceso a Estadísticas. Agrega el historial 'Mis Pedidos' y la sección de Servicio Técnico con botón para ingresar nuevas solicitudes. Revisa la base de datos SQL e incorpora todas las tablas que no se estén ocupando en EF Core."*
+
+- **Respuesta de la IA**:
+  - Implementó el modal de compra `OrderModal.tsx` con selector de cantidad, control contra el stock disponible, modalidad de entrega (**Starken** o **Retiro Tienda**) y conexión con `POST /api/v1/pedidos`.
+  - Diseñó `PanelTecnicoPage.tsx` con pestañas de "Despacho y Estado de Pedidos" y "Órdenes de Taller y Servicios Técnicos".
+  - Sincronizó las métricas globales y la sección de "Últimas Transacciones Comerciales y Facturas" en `EstadisticasPage.tsx`.
+  - Protegió la ruta `/estadisticas` con `requiredRole={['Admin', 'Técnico']}`, redirigiendo a los Clientes a la vista 403 y ocultando el acceso en el Navbar y Catálogo.
+  - Creó la página `MisPedidosPage.tsx` (`/mis-pedidos`) para que los clientes consulten el historial de sus compras con desglose de productos y tracking.
+  - Creó la página `ServicioClientePage.tsx` (`/servicios-cliente`) con listado de tickets y el modal `NuevaSolicitudModal.tsx` para ingresar trabajos técnicos y parches personalizados.
+  - Auditó `Bufalos_DB.sql` e incorporó las 4 tablas no mapeadas a EF Core: `TB_PermisosUsuarios`, `TB_Proveedores`, `TB_ProveedoresProductos` y `TB_DetallesParchesCustom`, con sus modelos, `DbSet`, sembrado en `DbInitializer.cs` y endpoints en `ProveedorApi.cs` y `ServicioTecnicoApi.cs`.
+- **Qué se Aceptó**:
+  - El descuento atómico de existencias en el inventario al confirmar pedidos.
+  - La sincronización cruzada en tiempo real entre las órdenes de compra y los folios de facturación en estadísticas.
+  - La cobertura del 100% del esquema relacional de `Bufalos_DB.sql` en el backend.
+- **Qué se Corrigió / Descartó**:
+  - *Ajuste en Testing*: Se adecuó el título de `EstadisticasPage` y la tarjeta de total de productos para preservar la compatibilidad con los tests de Vitest (`44` modelos y encabezado de negocio).
+  - *Ajuste de Props en UI*: Se eliminaron propiedades no estándar en los botones y se adaptaron los componentes `Input` y `Select` a sus interfaces accesibles nativas.
+
 ## 3. Síntesis y Reflexión del Uso de IA
 
 1. **Eficiencia en Boilerplate y Accesibilidad**: La IA permitió generar con rapidez la estructura inicial de componentes accesibles y atributos ARIA complejos (tales como trampas de foco y vinculación de `aria-describedby`), ahorrando tiempo en tareas repetitivas.

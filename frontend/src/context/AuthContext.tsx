@@ -8,6 +8,7 @@ export interface AuthContextType {
   isAuthenticated: boolean;
   isAdmin: boolean;
   isCliente: boolean;
+  isTecnico?: boolean;
   isLoading: boolean;
   login: (credentials: LoginCredentials, remember?: boolean) => Promise<void>;
   logout: () => void;
@@ -70,8 +71,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const isAuthenticated = !!token && !!user && !authService.isTokenExpired(token);
-  const isAdmin = user?.rol === 'Admin';
+  const isAdmin = user?.rol === 'Admin' || user?.rol === 'Administrador';
   const isCliente = user?.rol === 'Cliente';
+  const isTecnico = user?.rol === 'Técnico' || user?.rol === 'Tecnico';
 
   return (
     <AuthContext.Provider
@@ -81,6 +83,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         isAuthenticated,
         isAdmin,
         isCliente,
+        isTecnico,
         isLoading,
         login,
         logout,

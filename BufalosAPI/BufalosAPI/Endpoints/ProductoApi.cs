@@ -94,8 +94,61 @@ namespace BufalosAPI.Endpoints
                     })
                     .ToList();
 
+                // Facturación y transacciones comerciales consolidadas
+                var totalFacturadoPedidos = await db.Pedidos.SumAsync(p => (decimal?)p.Total) ?? 0m;
+                var totalFacturadoServicios = await db.OrdenesServicio.SumAsync(o => (decimal?)o.CostoTotal) ?? 0m;
+                var totalFacturado = totalFacturadoPedidos + totalFacturadoServicios;
+
+                var totalPedidos = await db.Pedidos.CountAsync();
+                var pedidosPendientesCount = await db.Pedidos.CountAsync(p => p.EstadoPedido == "Pendiente" || p.EstadoPedido == "Creado");
+                var totalServicios = await db.OrdenesServicio.CountAsync();
+                var serviciosEnProcesoCount = await db.OrdenesServicio.CountAsync(o => o.Estado == "Recibido" || o.Estado == "En Proceso");
+
+                var ultimosPedidos = await db.Pedidos
+                    .Include(p => p.Usuario)
+                    .OrderByDescending(p => p.FechaPedido)
+                    .Take(8)
+                    .Select(p => new
+                    {
+                        id = $"FAC-{p.Id_Pedido:D5}",
+                        tipo = "Venta y Despacho",
+                        cliente = p.Usuario != null ? p.Usuario.NombreCompleto : "Cliente Registrado",
+                        fecha = p.FechaPedido,
+                        monto = p.Total,
+                        estado = p.EstadoPedido
+                    })
+                    .ToListAsync();
+
+                var ultimosServicios = await db.OrdenesServicio
+                    .Include(o => o.Cliente)
+                    .Include(o => o.TipoServicio)
+                    .OrderByDescending(o => o.FechaIngreso)
+                    .Take(8)
+                    .Select(o => new
+                    {
+                        id = $"SRV-{o.Id_OrdenServicio:D5}",
+                        tipo = o.TipoServicio != null ? o.TipoServicio.Nombre : "Servicio Técnico",
+                        cliente = o.Cliente != null ? o.Cliente.NombreCompleto : "Cliente Registrado",
+                        fecha = o.FechaIngreso,
+                        monto = o.CostoTotal,
+                        estado = o.Estado
+                    })
+                    .ToListAsync();
+
+                var ultimasTransacciones = ultimosPedidos
+                    .Concat(ultimosServicios)
+                    .OrderByDescending(t => t.fecha)
+                    .Take(10)
+                    .ToList();
+
                 return Results.Ok(new
                 {
+                    totalFacturado,
+                    totalPedidos,
+                    pedidosPendientesCount,
+                    totalServicios,
+                    serviciosEnProcesoCount,
+                    ultimasTransacciones,
                     totalProductos,
                     totalStock,
                     valorInventario,

@@ -12,6 +12,7 @@ import {
   RefreshCw,
   Search,
   Shield,
+  ShoppingCart,
   Trash2,
   X,
 } from 'lucide-react';
@@ -26,10 +27,12 @@ import { Button } from '../components/ui/Button';
 import { ConfirmDialog } from '../components/ui/ConfirmDialog';
 import { LoadingSkeleton } from '../components/ui/LoadingSkeleton';
 import { ProductImageCard } from '../components/ui/ProductImageCard';
+import { OrderModal } from '../components/orders/OrderModal';
 import { getProductImageUrl, getCategorySymbol } from '../utils/productImages';
 
 export const ProductosListPage: React.FC = () => {
-  const { isAdmin } = useAuth();
+  const { isAdmin, isTecnico, isAuthenticated } = useAuth();
+  const canAccessTecnico = isAdmin || isTecnico;
 
   const [productos, setProductos] = useState<Producto[]>([]);
   const [categorias, setCategorias] = useState<Categoria[]>([]);
@@ -53,6 +56,13 @@ export const ProductosListPage: React.FC = () => {
   const [productoToDelete, setProductoToDelete] = useState<Producto | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [deleteNotification, setDeleteNotification] = useState<string | null>(null);
+  const [productoToBuy, setProductoToBuy] = useState<Producto | null>(null);
+  const [orderSuccessMessage, setOrderSuccessMessage] = useState<string | null>(null);
+
+  const handleOrderSuccess = (pedidoId: number) => {
+    setOrderSuccessMessage(`¡Pedido #${pedidoId.toString().padStart(5, '0')} registrado exitosamente! El inventario fue actualizado.`);
+    loadData();
+  };
 
   const handleViewModeChange = (mode: 'grid' | 'table') => {
     setViewMode(mode);
@@ -140,15 +150,38 @@ export const ProductosListPage: React.FC = () => {
           </p>
         </div>
 
-        <div className="flex items-center gap-3">
-          <Link to="/estadisticas">
-            <Button
-              variant="outline"
-              className="font-bold text-slate-700 hover:text-slate-900"
-            >
-              📊 Ver Estadísticas
-            </Button>
-          </Link>
+        <div className="flex flex-wrap items-center gap-2.5">
+          {canAccessTecnico && (
+            <Link to="/estadisticas">
+              <Button
+                variant="outline"
+                className="font-bold text-slate-700 hover:text-slate-900"
+              >
+                📊 Ver Estadísticas
+              </Button>
+            </Link>
+          )}
+
+          {isAuthenticated && (
+            <>
+              <Link to="/mis-pedidos">
+                <Button
+                  variant="outline"
+                  className="font-semibold text-slate-700 hover:text-slate-900"
+                >
+                  📦 Mis Pedidos
+                </Button>
+              </Link>
+              <Link to="/servicios-cliente">
+                <Button
+                  variant="outline"
+                  className="font-semibold text-amber-700 hover:text-amber-900 border-amber-200 hover:bg-amber-50"
+                >
+                  🔧 Servicio Técnico
+                </Button>
+              </Link>
+            </>
+          )}
 
           {isAdmin && (
             <Link to="/productos/nuevo" className="self-start sm:self-auto">
@@ -163,6 +196,17 @@ export const ProductosListPage: React.FC = () => {
           )}
         </div>
       </div>
+
+      {/* Notificación de compra exitosa */}
+      {orderSuccessMessage && (
+        <Alert
+          type="success"
+          title="¡Pedido Realizado con Éxito!"
+          onClose={() => setOrderSuccessMessage(null)}
+        >
+          {orderSuccessMessage}
+        </Alert>
+      )}
 
       {/* Notificación de eliminación exitosa */}
       {deleteNotification && (
@@ -387,12 +431,12 @@ export const ProductosListPage: React.FC = () => {
                       <div className="p-4 space-y-3">
                         {/* Categoría y Badges de Restricción */}
                         <div className="flex flex-wrap items-center justify-between gap-1.5">
-                          <Badge variant="blue" size="sm">
+                          <Badge variant="blue" >
                             {catNombre}
                           </Badge>
 
                           {p.restriccionEdad > 0 ? (
-                            <Badge variant="red" size="sm" icon={<Shield className="w-3 h-3" />}>
+                            <Badge variant="red"  icon={<Shield className="w-3 h-3" />}>
                               +{p.restriccionEdad} años
                             </Badge>
                           ) : (
@@ -459,6 +503,21 @@ export const ProductosListPage: React.FC = () => {
                           Ver Detalle
                         </Button>
                       </Link>
+
+                      <Button
+                        variant="primary"
+                        onClick={() => setProductoToBuy(p)}
+                        disabled={stock <= 0}
+                        aria-label={`Comprar ${nombre}`}
+                        className={`text-xs font-bold py-2 px-3 shadow-xs min-h-[44px] flex items-center gap-1.5 ${
+                          stock > 0
+                            ? 'bg-emerald-600 hover:bg-emerald-700 text-white'
+                            : 'bg-slate-200 text-slate-400 cursor-not-allowed'
+                        }`}
+                        icon={<ShoppingCart className="w-4 h-4" aria-hidden="true" />}
+                      >
+                        {stock > 0 ? 'Comprar' : 'Agotado'}
+                      </Button>
 
                       {isAdmin && (
                         <>
@@ -546,7 +605,7 @@ export const ProductosListPage: React.FC = () => {
                           </div>
                         </td>
                         <td className="px-4 py-3.5">
-                          <Badge variant="blue" size="sm">
+                          <Badge variant="blue" >
                             {catNombre}
                           </Badge>
                         </td>
@@ -566,7 +625,7 @@ export const ProductosListPage: React.FC = () => {
                         </td>
                         <td className="px-4 py-3.5">
                           {p.restriccionEdad > 0 ? (
-                            <Badge variant="red" size="sm" icon={<Shield className="w-3 h-3" />}>
+                            <Badge variant="red"  icon={<Shield className="w-3 h-3" />}>
                               +{p.restriccionEdad} años
                             </Badge>
                           ) : (
@@ -575,6 +634,21 @@ export const ProductosListPage: React.FC = () => {
                         </td>
                         <td className="px-4 py-3.5 text-right">
                           <div className="flex items-center justify-end gap-1.5">
+                            <Button
+                                variant="primary"
+                                
+                                onClick={() => setProductoToBuy(p)}
+                                disabled={stock <= 0}
+                                aria-label={`Comprar ${nombre} en tabla`}
+                                className={`p-2 min-h-[44px] text-xs font-bold flex items-center gap-1 ${
+                                  stock > 0
+                                    ? 'bg-emerald-600 hover:bg-emerald-700 text-white'
+                                    : 'bg-slate-200 text-slate-400 cursor-not-allowed'
+                                }`}
+                              >
+                                <ShoppingCart className="w-4 h-4" aria-hidden="true" />
+                                <span className="hidden sm:inline">{stock > 0 ? 'Comprar' : 'Agotado'}</span>
+                              </Button>
                             <Link to={`/productos/${id}`}>
                               <Button
                                 variant="ghost"
@@ -684,6 +758,14 @@ export const ProductosListPage: React.FC = () => {
           )}
         </div>
       )}
+
+      {/* Modal de Compra y Pedido Directo */}
+      <OrderModal
+        producto={productoToBuy}
+        isOpen={!!productoToBuy}
+        onClose={() => setProductoToBuy(null)}
+        onSuccess={handleOrderSuccess}
+      />
 
       {/* Diálogo Accesible de Confirmación de Eliminación */}
       <ConfirmDialog
