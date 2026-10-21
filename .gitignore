@@ -18,3 +18,7 @@ frontend/playwright-report/
 # Variables de entorno con secretos reales
 *.env
 !*.env.example
+
+# Archivos multimedia subidos (mantener carpeta con .gitkeep)
+**/wwwroot/uploads/productos/*
+!**/wwwroot/uploads/productos/.gitkeep

@@ -34,6 +34,36 @@ export const productoService = {
     await apiClient.delete(`/productos/${id}`);
   },
 
+  async uploadImagen(file: File): Promise<{ url: string; nombreArchivo: string; mensaje?: string }> {
+    const formData = new FormData();
+    formData.append('file', file);
+    const response = await apiClient.post<{ url: string; nombreArchivo: string; mensaje?: string }>(
+      '/productos/upload-imagen',
+      formData,
+      {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      }
+    );
+    return response.data;
+  },
+
+  async asociarImagen(id: number, file: File): Promise<{ mensaje: string; imagenUrl: string; producto: Producto }> {
+    const formData = new FormData();
+    formData.append('file', file);
+    const response = await apiClient.post<{ mensaje: string; imagenUrl: string; producto: Producto }>(
+      `/productos/${id}/imagen`,
+      formData,
+      {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      }
+    );
+    return response.data;
+  },
+
   async getEstadisticas(): Promise<import('../types/producto').EstadisticasResponse> {
     const response = await apiClient.get<import('../types/producto').EstadisticasResponse>('/productos/estadisticas');
     return response.data;

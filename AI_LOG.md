@@ -169,6 +169,36 @@ A continuación se detallan los prompts relevantes utilizados a lo largo de las 
   - *Ajuste en Testing*: Se adecuó el título de `EstadisticasPage` y la tarjeta de total de productos para preservar la compatibilidad con los tests de Vitest (`44` modelos y encabezado de negocio).
   - *Ajuste de Props en UI*: Se eliminaron propiedades no estándar en los botones y se adaptaron los componentes `Input` y `Select` a sus interfaces accesibles nativas.
 
+---
+
+### Etapa 8: Gestión de Imágenes de Productos, Upload Seguro (OWASP) y Vista Previa en Tiempo Real
+
+#### Prompt 8.1: Arquitectura Full-Stack de Gestión de Imágenes
+> *"Necesito implementar la funcionalidad de gestión de imágenes para los productos del sistema 'Búfalos' (Equipamiento Táctico). Actualiza la entidad Producto con ImagenUrl, refleja el campo en SQL Server y DTOs, implementa el endpoint seguro de upload a wwwroot/uploads con autorización Admin, añade miniaturas en tabla/catálogo con fallback táctico, y agrega en el formulario de administración la carga de archivos, ingreso de URL y previsualización en tiempo real."*
+
+- **Respuesta de la IA**:
+  - Actualizó la entidad `Producto` en backend y `BufalosDbContext` con la propiedad `ImagenUrl NVARCHAR(500) NULL`, junto con la migración automática condicional en `Bufalos_DB.sql`.
+  - Actualizó los DTOs `ProductoDto`, `CreateProductoDto` y `UpdateProductoDto` para admitir `ImagenUrl`.
+  - Diseñó e implementó los endpoints seguros `POST /api/v1/productos/upload-imagen` y `POST /api/v1/productos/{id}/imagen` en `ProductoApi.cs`, restringidos con `.RequireAuthorization("AdminOnly")` e incorporando mitigaciones OWASP:
+    1. Límite de tamaño estricto (máximo 5 MB) para prevenir ataques de Denegación de Servicio (DoS).
+    2. Lista blanca de extensiones de archivo permitidas (`.jpg`, `.jpeg`, `.png`, `.webp`, `.gif`).
+    3. Validación de MIME Content-Type.
+    4. Generación de nombres de archivo criptográficos con GUID para impedir ataques de *Directory Traversal* y ejecución remota de código (RCE).
+    5. Habilitación de `app.UseStaticFiles()` en `Program.cs` para el consumo público de `/uploads/productos/`.
+  - En el frontend:
+    - Extendió los tipos TypeScript `Producto` y `ProductoInput` con `imagenUrl?: string | null`.
+    - Agregó los métodos `uploadImagen` y `asociarImagen` en `productoService.ts`.
+    - Adaptó `ProductImageCard.tsx` y `getProductImageUrl` para resolver URLs absolutas, relativas al backend (`/uploads/...`) o aplicar automáticamente la imagen táctica de respaldo cuando `imagenUrl` no se proporciona o falla.
+    - Mostró la miniatura del producto (`<img>`) en la vista de tabla y galería del catálogo (`ProductosListPage.tsx`) y en el detalle (`ProductoDetailPage.tsx`).
+    - Enriqueció el formulario de administración (`ProductoFormPage.tsx`) con un selector dual (Subir archivo o Ingresar URL), validación en cliente y previsualización gráfica en tiempo real antes de guardar, accesible exclusivamente por administradores.
+- **Qué se Aceptó**:
+  - La arquitectura segura de almacenamiento local estático con GUIDs y restricciones estrictas de rol.
+  - El sistema de fallback táctico que garantiza que ningún producto quede visualmente vacío.
+  - La suite de pruebas de integración en .NET ampliada a 10 pruebas exitosas (validando 401 sin token y 200 con Admin en upload).
+- **Qué se Corrigió / Descartó**:
+  - *Ajuste de Codificación (UTF-8)*: Se normalizó el archivo de utilidades `productImages.ts` y las vistas de productos eliminando caracteres mojibake y restaurando los emojis tácticos de categorías.
+  - *Ajuste de Gitignore*: Se añadió regla para omitir archivos temporales de prueba en `wwwroot/uploads/productos/` conservando el archivo `.gitkeep`.
+
 ## 3. Síntesis y Reflexión del Uso de IA
 
 1. **Eficiencia en Boilerplate y Accesibilidad**: La IA permitió generar con rapidez la estructura inicial de componentes accesibles y atributos ARIA complejos (tales como trampas de foco y vinculación de `aria-describedby`), ahorrando tiempo en tareas repetitivas.

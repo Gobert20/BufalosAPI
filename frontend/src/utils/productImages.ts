@@ -174,9 +174,31 @@ const CATEGORY_FALLBACK_IMAGES: Record<number, string> = {
 };
 
 /**
- * Obtiene la URL de imagen más adecuada para un producto según su nombre y categoría.
+ * Obtiene la URL de imagen más adecuada para un producto según su imagenUrl personalizada,
+ * o bien según su nombre y categoría táctica.
  */
-export function getProductImageUrl(nombre: string, categoriaId: number): string {
+export function getProductImageUrl(
+  nombre: string,
+  categoriaId: number,
+  imagenUrl?: string | null
+): string {
+  if (imagenUrl && typeof imagenUrl === 'string' && imagenUrl.trim().length > 0) {
+    const trimmed = imagenUrl.trim();
+    if (trimmed.startsWith('http://') || trimmed.startsWith('https://') || trimmed.startsWith('data:')) {
+      return trimmed;
+    }
+    if (trimmed.startsWith('/')) {
+      const apiBase = (import.meta as unknown as { env?: { VITE_API_BASE_URL?: string } }).env?.VITE_API_BASE_URL || 'http://localhost:51800/api/v1';
+      try {
+        const origin = new URL(apiBase).origin;
+        return `${origin}${trimmed}`;
+      } catch {
+        return `http://localhost:51800${trimmed}`;
+      }
+    }
+    return trimmed;
+  }
+
   const cleanName = (nombre || '').toLowerCase();
 
   for (const entry of TACTICAL_IMAGE_MAP) {

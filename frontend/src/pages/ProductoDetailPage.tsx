@@ -166,6 +166,7 @@ export const ProductoDetailPage: React.FC = () => {
         <ProductImageCard
           nombre={producto.nombre}
           categoriaId={producto.id_Categoria}
+          imagenUrl={producto.imagenUrl}
           className="w-full h-64 sm:h-80"
           aspectRatio="aspect-16/9"
         />

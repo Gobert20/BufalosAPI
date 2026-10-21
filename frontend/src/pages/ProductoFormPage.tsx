@@ -3,7 +3,18 @@ import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { ArrowLeft, Check, Package, Save } from 'lucide-react';
+import {
+  ArrowLeft,
+  Check,
+  CheckCircle2,
+  Image as ImageIcon,
+  Link as LinkIcon,
+  Package,
+  Save,
+  Trash2,
+  Upload,
+} from 'lucide-react';
+import { useAuth } from '../hooks/useAuth';
 import { categoriaService } from '../services/categoriaService';
 import { productoService } from '../services/productoService';
 import { ApiError } from '../types/api';
@@ -14,6 +25,7 @@ import { Input } from '../components/ui/Input';
 import { LoadingSkeleton } from '../components/ui/LoadingSkeleton';
 import { Select } from '../components/ui/Select';
 import { Textarea } from '../components/ui/Textarea';
+import { getProductImageUrl } from '../utils/productImages';
 
 const productoSchema = z.object({
   nombre: z
@@ -39,6 +51,7 @@ const productoSchema = z.object({
   requierePermiso: z.boolean(),
   soloPersonalAutorizado: z.boolean(),
   numeroSerie: z.string().max(50, 'El número de serie no puede exceder 50 caracteres').optional(),
+  imagenUrl: z.string().max(500, 'La URL de la imagen no puede exceder 500 caracteres').optional().nullable(),
 });
 
 type ProductoFormData = z.infer<typeof productoSchema>;
@@ -47,15 +60,27 @@ export const ProductoFormPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const isEditing = Boolean(id);
   const navigate = useNavigate();
+  const { isAdmin } = useAuth();
 
   const [categorias, setCategorias] = useState<Categoria[]>([]);
   const [isLoadingData, setIsLoadingData] = useState(true);
   const [serverError, setServerError] = useState<string | null>(null);
 
+  // Estados para la gestión de imágenes
+  const [imageMode, setImageMode] = useState<'upload' | 'url'>('upload');
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [isUploadingImage, setIsUploadingImage] = useState(false);
+  const [imageUploadStatus, setImageUploadStatus] = useState<{
+    type: 'success' | 'error';
+    message: string;
+  } | null>(null);
+
   const {
     register,
     handleSubmit,
     reset,
+    setValue,
+    watch,
     formState: { errors, isSubmitting },
   } = useForm<ProductoFormData>({
     resolver: zodResolver(productoSchema),
@@ -69,8 +94,13 @@ export const ProductoFormPage: React.FC = () => {
       requierePermiso: false,
       soloPersonalAutorizado: false,
       numeroSerie: '',
+      imagenUrl: '',
     },
   });
+
+  const watchedNombre = watch('nombre');
+  const watchedCategoriaId = watch('id_Categoria');
+  const watchedImagenUrl = watch('imagenUrl');
 
   useEffect(() => {
     const init = async () => {
@@ -92,9 +122,13 @@ export const ProductoFormPage: React.FC = () => {
             requierePermiso: prod.requierePermiso,
             soloPersonalAutorizado: prod.soloPersonalAutorizado,
             numeroSerie: prod.numeroSerie || '',
+            imagenUrl: prod.imagenUrl || '',
           });
+
+          if (prod.imagenUrl) {
+            setImagePreview(getProductImageUrl(prod.nombre, prod.id_Categoria, prod.imagenUrl));
+          }
         } else if (cats.length > 0) {
-          // Pre-seleccionar primera categoría en creación
           reset({
             nombre: '',
             descripcion: '',
@@ -105,6 +139,7 @@ export const ProductoFormPage: React.FC = () => {
             requierePermiso: false,
             soloPersonalAutorizado: false,
             numeroSerie: '',
+            imagenUrl: '',
           });
         }
       } catch (err) {
@@ -118,22 +153,90 @@ export const ProductoFormPage: React.FC = () => {
     init();
   }, [id, isEditing, reset]);
 
+  // Manejo de carga de archivo físico
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validación OWASP en cliente: tamaño máximo 5 MB
+    const maxFileSize = 5 * 1024 * 1024;
+    if (file.size > maxFileSize) {
+      setImageUploadStatus({
+        type: 'error',
+        message: 'El archivo excede el tamaño máximo permitido de 5 MB.',
+      });
+      return;
+    }
+
+    // Validación de tipo de imagen permitido
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+    if (!allowedTypes.includes(file.type)) {
+      setImageUploadStatus({
+        type: 'error',
+        message: 'Formato no soportado. Debe ser un archivo JPG, PNG, WEBP o GIF.',
+      });
+      return;
+    }
+
+    // Generar vista previa inmediata en el cliente
+    const localPreviewUrl = URL.createObjectURL(file);
+    setImagePreview(localPreviewUrl);
+    setImageUploadStatus(null);
+    setIsUploadingImage(true);
+
+    try {
+      // Subir archivo al backend seguro
+      const result = await productoService.uploadImagen(file);
+      setValue('imagenUrl', result.url, { shouldValidate: true, shouldDirty: true });
+      setImageUploadStatus({
+        type: 'success',
+        message: 'Imagen subida exitosamente al almacenamiento seguro del servidor.',
+      });
+    } catch (err) {
+      const apiErr = err as ApiError;
+      setImageUploadStatus({
+        type: 'error',
+        message: apiErr.message || 'Error al subir la imagen al servidor.',
+      });
+    } finally {
+      setIsUploadingImage(false);
+    }
+  };
+
+  // Manejo de cambio en la URL manual
+  const handleUrlChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const url = e.target.value;
+    setValue('imagenUrl', url, { shouldValidate: true, shouldDirty: true });
+    if (url.trim()) {
+      setImagePreview(getProductImageUrl(watchedNombre, watchedCategoriaId, url));
+    } else {
+      setImagePreview(null);
+    }
+    setImageUploadStatus(null);
+  };
+
+  // Quitar la imagen seleccionada
+  const handleRemoveImage = () => {
+    setValue('imagenUrl', '', { shouldValidate: true, shouldDirty: true });
+    setImagePreview(null);
+    setImageUploadStatus(null);
+  };
+
   const onSubmit = async (data: ProductoFormData) => {
     setServerError(null);
     try {
+      const payload = {
+        ...data,
+        descripcion: data.descripcion || null,
+        numeroSerie: data.numeroSerie || null,
+        imagenUrl: data.imagenUrl && data.imagenUrl.trim() !== '' ? data.imagenUrl.trim() : null,
+      };
+
       if (isEditing && id) {
-        await productoService.updateProducto(Number(id), {
-          ...data,
-          descripcion: data.descripcion || null,
-          numeroSerie: data.numeroSerie || null,
-        });
+        await productoService.updateProducto(Number(id), payload);
         navigate(`/productos/${id}`);
       } else {
-        const created = await productoService.createProducto({
-          ...data,
-          descripcion: data.descripcion || null,
-          numeroSerie: data.numeroSerie || null,
-        });
+        const created = await productoService.createProducto(payload);
         navigate(`/productos/${created.id_Producto}`);
       }
     } catch (err) {
@@ -175,8 +278,8 @@ export const ProductoFormPage: React.FC = () => {
               </h1>
               <p className="text-slate-400 text-xs mt-0.5">
                 {isEditing
-                  ? 'Modifique los atributos y guarde los cambios en la API RESTful'
-                  : 'Complete los datos requeridos para incorporar el artículo al inventario'}
+                  ? 'Modifique los atributos, imagen y guarde los cambios en la API RESTful'
+                  : 'Complete los datos requeridos e incorpore la imagen al inventario'}
               </p>
             </div>
           </div>
@@ -190,7 +293,7 @@ export const ProductoFormPage: React.FC = () => {
             </Alert>
           )}
 
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-5" noValidate>
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-6" noValidate>
             {/* Nombre */}
             <Input
               id="form-nombre"
@@ -241,6 +344,157 @@ export const ProductoFormPage: React.FC = () => {
                 {...register('stock')}
               />
             </div>
+
+            {/* ============================================================== */}
+            {/* SECCIÓN DE GESTIÓN DE IMAGEN (REQUERIMIENTO ROL ADMIN)        */}
+            {/* ============================================================== */}
+            {isAdmin && (
+              <div className="p-5 bg-slate-50 rounded-xl border border-slate-200 space-y-4">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-200 pb-3">
+                  <div className="flex items-center gap-2">
+                    <ImageIcon className="w-5 h-5 text-blue-600" aria-hidden="true" />
+                    <div>
+                      <h2 className="text-sm font-bold text-slate-900">
+                        Imagen del Producto (Administración)
+                      </h2>
+                      <p className="text-xs text-slate-500">
+                        Cargue un archivo local o especifique una URL externa
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Selector de modo: Subir archivo o Ingresar URL */}
+                  <div className="inline-flex rounded-lg border border-slate-200 bg-white p-1 self-start sm:self-auto">
+                    <button
+                      type="button"
+                      onClick={() => setImageMode('upload')}
+                      className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-semibold transition-all cursor-pointer ${
+                        imageMode === 'upload'
+                          ? 'bg-blue-600 text-white shadow-xs'
+                          : 'text-slate-600 hover:text-slate-900'
+                      }`}
+                    >
+                      <Upload className="w-3.5 h-3.5" aria-hidden="true" />
+                      <span>Subir archivo</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setImageMode('url')}
+                      className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-semibold transition-all cursor-pointer ${
+                        imageMode === 'url'
+                          ? 'bg-blue-600 text-white shadow-xs'
+                          : 'text-slate-600 hover:text-slate-900'
+                      }`}
+                    >
+                      <LinkIcon className="w-3.5 h-3.5" aria-hidden="true" />
+                      <span>Enlace URL</span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Modo 1: Carga de archivo de imagen */}
+                {imageMode === 'upload' && (
+                  <div className="space-y-3">
+                    <label
+                      htmlFor="form-image-file"
+                      className="block text-xs font-bold text-slate-700 uppercase tracking-wider"
+                    >
+                      Seleccionar imagen desde su equipo (Máx. 5 MB)
+                    </label>
+                    <div className="flex items-center gap-3">
+                      <input
+                        id="form-image-file"
+                        type="file"
+                        accept="image/jpeg,image/png,image/webp,image/gif"
+                        onChange={handleFileChange}
+                        disabled={isUploadingImage}
+                        className="block w-full text-xs text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 cursor-pointer border border-slate-200 rounded-lg p-1 bg-white"
+                      />
+                    </div>
+                    <p className="text-[11px] text-slate-500">
+                      Formatos compatibles: JPG, JPEG, PNG, WEBP, GIF. Los archivos se almacenan de forma segura en <code>/wwwroot/uploads/productos</code> con GUID para prevenir Directory Traversal (OWASP).
+                    </p>
+                  </div>
+                )}
+
+                {/* Modo 2: Entrada directa de URL */}
+                {imageMode === 'url' && (
+                  <div className="space-y-2">
+                    <Input
+                      id="form-image-url"
+                      label="URL o Ruta de la Imagen"
+                      placeholder="https://ejemplo.com/imagen.jpg o /uploads/productos/archivo.webp"
+                      value={watchedImagenUrl || ''}
+                      onChange={handleUrlChange}
+                      error={errors.imagenUrl?.message}
+                    />
+                    <p className="text-[11px] text-slate-500">
+                      Puede ingresar una URL web absoluta o la ruta relativa interna del servidor.
+                    </p>
+                  </div>
+                )}
+
+                {/* Mensaje de estado de subida */}
+                {imageUploadStatus && (
+                  <div
+                    className={`p-3 rounded-lg text-xs flex items-center gap-2 ${
+                      imageUploadStatus.type === 'success'
+                        ? 'bg-emerald-50 text-emerald-800 border border-emerald-200'
+                        : 'bg-red-50 text-red-800 border border-red-200'
+                    }`}
+                  >
+                    {imageUploadStatus.type === 'success' ? (
+                      <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                    ) : (
+                      <Package className="w-4 h-4 text-red-600 shrink-0" />
+                    )}
+                    <span>{imageUploadStatus.message}</span>
+                  </div>
+                )}
+
+                {/* Previsualización en tiempo real */}
+                <div className="pt-2">
+                  <span className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">
+                    Previsualización en Tiempo Real
+                  </span>
+
+                  <div className="relative w-full sm:w-64 h-44 rounded-xl overflow-hidden bg-slate-900 border border-slate-200 flex items-center justify-center group shadow-xs">
+                    {imagePreview || watchedImagenUrl ? (
+                      <>
+                        <img
+                          src={imagePreview || getProductImageUrl(watchedNombre, watchedCategoriaId, watchedImagenUrl)}
+                          alt="Vista previa del producto"
+                          className="w-full h-full object-cover"
+                          onError={(e) => {
+                            (e.currentTarget as HTMLImageElement).src = getProductImageUrl(watchedNombre, watchedCategoriaId, null);
+                          }}
+                        />
+                        <button
+                          type="button"
+                          onClick={handleRemoveImage}
+                          className="absolute top-2 right-2 bg-red-600/90 hover:bg-red-700 text-white p-1.5 rounded-md shadow-xs opacity-90 hover:opacity-100 transition-opacity cursor-pointer"
+                          title="Quitar imagen"
+                          aria-label="Quitar imagen actual"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" aria-hidden="true" />
+                        </button>
+                      </>
+                    ) : (
+                      /* Fallback táctico predeterminado */
+                      <div className="flex flex-col items-center justify-center text-slate-400 gap-1.5 p-4 text-center">
+                        <ImageIcon className="w-8 h-8 text-slate-500" aria-hidden="true" />
+                        <span className="text-xs font-semibold text-slate-300">
+                          Sin imagen personalizada
+                        </span>
+                        <span className="text-[10px] text-slate-400">
+                          Se aplicará la imagen táctica automática de su categoría
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* Descripción */}
             <Textarea
@@ -307,7 +561,7 @@ export const ProductoFormPage: React.FC = () => {
               <Button
                 type="submit"
                 variant="primary"
-                isLoading={isSubmitting}
+                isLoading={isSubmitting || isUploadingImage}
                 icon={isEditing ? <Check className="w-4 h-4" /> : <Save className="w-4 h-4" />}
                 className="w-full sm:w-auto font-bold shadow-md"
               >

@@ -66,6 +66,7 @@ CREATE TABLE TB_Productos (
     RequierePermiso BIT DEFAULT 0,
     SoloPersonalAutorizado BIT DEFAULT 0,
     NumeroSerie VARCHAR(100) NULL,
+    ImagenUrl NVARCHAR(500) NULL,
     CONSTRAINT FK_Producto_Categoria FOREIGN KEY (Id_Categoria) REFERENCES TB_Categorias(Id_Categoria)
 );
 GO
@@ -333,4 +334,12 @@ IF NOT EXISTS (SELECT 1 FROM TB_TiposServicio WHERE Nombre = 'Calibración e Ins
     INSERT INTO TB_TiposServicio (Nombre, CostoBase, TiempoEstimadoDias) VALUES ('Calibración e Instalación de Miras', 20000.00, 1);
 IF NOT EXISTS (SELECT 1 FROM TB_TiposServicio WHERE Nombre = 'Confección de Parches Personalizados')
     INSERT INTO TB_TiposServicio (Nombre, CostoBase, TiempoEstimadoDias) VALUES ('Confección de Parches Personalizados', 15000.00, 5);
+GO
+
+
+-- Migración automática: Agregar ImagenUrl a TB_Productos si no existe
+IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('TB_Productos') AND name = 'ImagenUrl')
+BEGIN
+    ALTER TABLE TB_Productos ADD ImagenUrl NVARCHAR(500) NULL;
+END
 GO

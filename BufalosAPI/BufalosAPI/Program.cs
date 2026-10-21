@@ -133,6 +133,7 @@ app.Use(async (context, next) =>
 
 // 11. CORS y Rate Limiting
 app.UseCors("FrontendCorsPolicy");
+app.UseStaticFiles();
 app.UseRateLimiter();
 
 // 12. OpenAPI en desarrollo

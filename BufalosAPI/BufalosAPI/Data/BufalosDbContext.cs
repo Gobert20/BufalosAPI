@@ -67,6 +67,7 @@ namespace BufalosAPI.Data
                 e.ToTable("TB_Productos");
                 e.HasKey(p => p.Id_Producto);
                 e.Property(p => p.Precio).HasColumnType("decimal(10,2)");
+                e.Property(p => p.ImagenUrl).HasMaxLength(500).IsRequired(false);
                 e.HasOne(p => p.Categoria).WithMany().HasForeignKey(p => p.Id_Categoria);
             });
 

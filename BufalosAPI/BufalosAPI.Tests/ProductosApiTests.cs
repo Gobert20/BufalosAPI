@@ -179,5 +179,47 @@ namespace BufalosAPI.Tests
             Assert.True(json.TryGetProperty("rol", out var rolProp));
             Assert.Equal("Técnico", rolProp.GetString());
         }
+
+        [Fact]
+        public async Task SubirImagen_SinToken_DevuelveHttp401Unauthorized()
+        {
+            using var content = new MultipartFormDataContent();
+            var fileContent = new ByteArrayContent(new byte[] { 0xFF, 0xD8, 0xFF, 0xE0 });
+            fileContent.Headers.ContentType = new MediaTypeHeaderValue("image/jpeg");
+            content.Add(fileContent, "file", "test.jpg");
+
+            var response = await _client.PostAsync("/api/v1/productos/upload-imagen", content);
+            Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+        }
+
+        [Fact]
+        public async Task SubirImagen_ConRolAdmin_DevuelveHttp200OK()
+        {
+            // 1. Login Admin
+            var loginAdmin = await _client.PostAsJsonAsync("/api/v1/usuarios/login", new
+            {
+                Correo = "admin@bufalos.cl",
+                Password = "Admin123!"
+            });
+            var json = await loginAdmin.Content.ReadFromJsonAsync<JsonElement>();
+            var token = json.GetProperty("token").GetString();
+
+            // 2. Subir imagen
+            using var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/productos/upload-imagen");
+            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+
+            using var content = new MultipartFormDataContent();
+            var fileContent = new ByteArrayContent(new byte[] { 0xFF, 0xD8, 0xFF, 0xE0 });
+            fileContent.Headers.ContentType = new MediaTypeHeaderValue("image/jpeg");
+            content.Add(fileContent, "file", "tactico_test.jpg");
+            request.Content = content;
+
+            var response = await _client.SendAsync(request);
+            Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+            var resJson = await response.Content.ReadFromJsonAsync<JsonElement>();
+            Assert.True(resJson.TryGetProperty("url", out var urlProp));
+            Assert.StartsWith("/uploads/productos/", urlProp.GetString());
+        }
     }
 }

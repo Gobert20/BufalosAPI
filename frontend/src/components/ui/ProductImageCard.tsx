@@ -5,6 +5,7 @@ import { getProductImageUrl, getCategorySymbol } from '../../utils/productImages
 interface ProductImageProps {
   nombre: string;
   categoriaId: number;
+  imagenUrl?: string | null;
   className?: string;
   aspectRatio?: string;
 }
@@ -12,13 +13,14 @@ interface ProductImageProps {
 export const ProductImageCard: React.FC<ProductImageProps> = ({
   nombre,
   categoriaId,
+  imagenUrl,
   className = 'w-full h-48',
   aspectRatio = 'aspect-4/3',
 }) => {
   const [hasError, setHasError] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
-  const src = getProductImageUrl(nombre, categoriaId);
+  const src = getProductImageUrl(nombre, categoriaId, imagenUrl);
   const symbol = getCategorySymbol(categoriaId);
 
   return (

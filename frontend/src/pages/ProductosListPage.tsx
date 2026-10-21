@@ -425,18 +425,18 @@ export const ProductosListPage: React.FC = () => {
                         aria-label={`Ver detalles de ${nombre}`}
                         className="block focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 rounded-t-xl"
                       >
-                        <ProductImageCard nombre={nombre} categoriaId={p.id_Categoria} />
+                        <ProductImageCard nombre={nombre} categoriaId={p.id_Categoria} imagenUrl={p.imagenUrl} />
                       </Link>
 
                       <div className="p-4 space-y-3">
                         {/* Categoría y Badges de Restricción */}
                         <div className="flex flex-wrap items-center justify-between gap-1.5">
-                          <Badge variant="blue" >
+                          <Badge variant="blue">
                             {catNombre}
                           </Badge>
 
                           {p.restriccionEdad > 0 ? (
-                            <Badge variant="red"  icon={<Shield className="w-3 h-3" />}>
+                            <Badge variant="red" icon={<Shield className="w-3 h-3" />}>
                               +{p.restriccionEdad} años
                             </Badge>
                           ) : (
@@ -485,56 +485,56 @@ export const ProductosListPage: React.FC = () => {
                                   : 'bg-red-100 text-red-800'
                               }`}
                             >
-                              {stock > 0 ? `${stock} un.` : 'Agotado'}
+                              {stock > 0 ? `${stock} disp.` : 'Agotado'}
                             </span>
                           </div>
                         </div>
                       </div>
                     </div>
 
-                    {/* Acciones del Card con Touch Targets >= 44x44px */}
-                    <div className="p-3 bg-slate-50/70 border-t border-slate-100 flex items-center gap-2">
-                      <Link to={`/productos/${id}`} className="flex-1">
-                        <Button
-                          variant="outline"
-                          className="w-full text-xs font-semibold py-2"
-                          icon={<Eye className="w-4 h-4" aria-hidden="true" />}
-                        >
-                          Ver Detalle
-                        </Button>
-                      </Link>
-
+                    {/* Botones de Acción en Tarjeta */}
+                    <div className="p-4 pt-0 border-t border-slate-100 mt-2 flex items-center gap-2">
                       <Button
                         variant="primary"
                         onClick={() => setProductoToBuy(p)}
                         disabled={stock <= 0}
                         aria-label={`Comprar ${nombre}`}
-                        className={`text-xs font-bold py-2 px-3 shadow-xs min-h-[44px] flex items-center gap-1.5 ${
+                        className={`flex-1 py-2 text-xs font-bold flex items-center justify-center gap-1.5 min-h-[44px] ${
                           stock > 0
-                            ? 'bg-emerald-600 hover:bg-emerald-700 text-white'
+                            ? 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs'
                             : 'bg-slate-200 text-slate-400 cursor-not-allowed'
                         }`}
-                        icon={<ShoppingCart className="w-4 h-4" aria-hidden="true" />}
                       >
-                        {stock > 0 ? 'Comprar' : 'Agotado'}
+                        <ShoppingCart className="w-4 h-4" aria-hidden="true" />
+                        <span>{stock > 0 ? 'Comprar' : 'Sin Stock'}</span>
                       </Button>
+
+                      <Link to={`/productos/${id}`}>
+                        <Button
+                          variant="outline"
+                          aria-label={`Ver detalles técnicos de ${nombre}`}
+                          className="px-2.5 py-2 text-xs font-semibold min-h-[44px] min-w-[44px] flex items-center justify-center"
+                        >
+                          <Eye className="w-4 h-4" aria-hidden="true" />
+                        </Button>
+                      </Link>
 
                       {isAdmin && (
                         <>
                           <Link to={`/productos/editar/${id}`}>
                             <Button
                               variant="ghost"
-                              aria-label={`Editar ${nombre}`}
-                              className="p-2 min-h-[44px] min-w-[44px] text-blue-700 hover:bg-blue-50"
+                              aria-label={`Editar producto ${nombre}`}
+                              className="px-2 py-2 min-h-[44px] min-w-[44px]"
                             >
-                              <Pencil className="w-4 h-4" aria-hidden="true" />
+                              <Pencil className="w-4 h-4 text-blue-600" aria-hidden="true" />
                             </Button>
                           </Link>
                           <Button
                             variant="ghost"
                             aria-label={`Eliminar producto ${nombre}`}
                             onClick={() => setProductoToDelete(p)}
-                            className="p-2 min-h-[44px] min-w-[44px] text-red-700 hover:bg-red-50"
+                            className="px-2 py-2 min-h-[44px] min-w-[44px] text-red-600 hover:bg-red-50 hover:text-red-700"
                           >
                             <Trash2 className="w-4 h-4" aria-hidden="true" />
                           </Button>
@@ -572,7 +572,7 @@ export const ProductosListPage: React.FC = () => {
                     const stock = p.stock;
                     const catNombre = p.categoria?.nombre || 'General';
                     const symbol = getCategorySymbol(p.id_Categoria);
-                    const imgUrl = getProductImageUrl(nombre, p.id_Categoria);
+                    const imgUrl = getProductImageUrl(nombre, p.id_Categoria, p.imagenUrl);
 
                     return (
                       <tr key={id} className="hover:bg-slate-50/80 transition-colors">
@@ -582,9 +582,12 @@ export const ProductosListPage: React.FC = () => {
                             <div className="relative w-12 h-12 rounded-lg overflow-hidden bg-slate-900 shrink-0 border border-slate-200 shadow-2xs">
                               <img
                                 src={imgUrl}
-                                alt=""
+                                alt={`Miniatura de ${nombre}`}
                                 loading="lazy"
                                 className="w-full h-full object-cover"
+                                onError={(e) => {
+                                  (e.currentTarget as HTMLImageElement).src = getProductImageUrl(nombre, p.id_Categoria, null);
+                                }}
                               />
                               <span
                                 className="absolute bottom-0 right-0 bg-slate-900/80 text-[10px] px-1 rounded-tl-sm text-white"
@@ -605,7 +608,7 @@ export const ProductosListPage: React.FC = () => {
                           </div>
                         </td>
                         <td className="px-4 py-3.5">
-                          <Badge variant="blue" >
+                          <Badge variant="blue">
                             {catNombre}
                           </Badge>
                         </td>
@@ -625,7 +628,7 @@ export const ProductosListPage: React.FC = () => {
                         </td>
                         <td className="px-4 py-3.5">
                           {p.restriccionEdad > 0 ? (
-                            <Badge variant="red"  icon={<Shield className="w-3 h-3" />}>
+                            <Badge variant="red" icon={<Shield className="w-3 h-3" />}>
                               +{p.restriccionEdad} años
                             </Badge>
                           ) : (
@@ -635,20 +638,19 @@ export const ProductosListPage: React.FC = () => {
                         <td className="px-4 py-3.5 text-right">
                           <div className="flex items-center justify-end gap-1.5">
                             <Button
-                                variant="primary"
-                                
-                                onClick={() => setProductoToBuy(p)}
-                                disabled={stock <= 0}
-                                aria-label={`Comprar ${nombre} en tabla`}
-                                className={`p-2 min-h-[44px] text-xs font-bold flex items-center gap-1 ${
-                                  stock > 0
-                                    ? 'bg-emerald-600 hover:bg-emerald-700 text-white'
-                                    : 'bg-slate-200 text-slate-400 cursor-not-allowed'
-                                }`}
-                              >
-                                <ShoppingCart className="w-4 h-4" aria-hidden="true" />
-                                <span className="hidden sm:inline">{stock > 0 ? 'Comprar' : 'Agotado'}</span>
-                              </Button>
+                              variant="primary"
+                              onClick={() => setProductoToBuy(p)}
+                              disabled={stock <= 0}
+                              aria-label={`Comprar ${nombre} en tabla`}
+                              className={`p-2 min-h-[44px] text-xs font-bold flex items-center gap-1 ${
+                                stock > 0
+                                  ? 'bg-emerald-600 hover:bg-emerald-700 text-white'
+                                  : 'bg-slate-200 text-slate-400 cursor-not-allowed'
+                              }`}
+                            >
+                              <ShoppingCart className="w-4 h-4" aria-hidden="true" />
+                              <span className="hidden sm:inline">{stock > 0 ? 'Comprar' : 'Agotado'}</span>
+                            </Button>
                             <Link to={`/productos/${id}`}>
                               <Button
                                 variant="ghost"

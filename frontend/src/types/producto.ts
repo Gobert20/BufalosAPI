@@ -14,6 +14,7 @@ export interface Producto {
   requierePermiso: boolean;
   soloPersonalAutorizado: boolean;
   numeroSerie: string | null;
+  imagenUrl?: string | null;
   categoria?: Categoria | null;
 }
 
@@ -27,6 +28,7 @@ export interface ProductoInput {
   requierePermiso: boolean;
   soloPersonalAutorizado: boolean;
   numeroSerie?: string | null;
+  imagenUrl?: string | null;
 }
 
 export interface CategoriaEstadistica {

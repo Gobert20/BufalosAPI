@@ -1,4 +1,4 @@
-﻿namespace BufalosAPI.Models
+namespace BufalosAPI.Models
 {
     public class Producto
     {
@@ -12,6 +12,7 @@
         public bool RequierePermiso { get; set; }
         public bool SoloPersonalAutorizado { get; set; }
         public string? NumeroSerie { get; set; }
+        public string? ImagenUrl { get; set; }
 
         public Categoria? Categoria { get; set; }
     }
