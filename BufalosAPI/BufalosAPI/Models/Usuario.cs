@@ -1,4 +1,4 @@
-﻿namespace BufalosAPI.Models
+namespace BufalosAPI.Models
 {
     public class Usuario
     {
@@ -9,8 +9,11 @@
         public int Id_Rol { get; set; }
         public DateTime FechaNacimiento { get; set; }
         public bool EsVerificado { get; set; }
+        public bool EstaBaneado { get; set; } = false;
+        public string? MotivoBaneo { get; set; }
         public DateTime FechaCreacion { get; set; } = DateTime.Now;
 
         public Rol? Rol { get; set; }
+        public ICollection<PermisoUsuario> Permisos { get; set; } = new List<PermisoUsuario>();
     }
 }

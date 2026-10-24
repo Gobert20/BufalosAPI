@@ -15,5 +15,6 @@ namespace BufalosAPI.Models
         public string? ImagenUrl { get; set; }
 
         public Categoria? Categoria { get; set; }
+        public ICollection<ProveedorProducto> ProveedoresProductos { get; set; } = new List<ProveedorProducto>();
     }
 }

@@ -12,13 +12,16 @@ import {
   Package,
   Save,
   Trash2,
+  Truck,
   Upload,
 } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import { categoriaService } from '../services/categoriaService';
 import { productoService } from '../services/productoService';
+import { proveedorService } from '../services/proveedorService';
 import { ApiError } from '../types/api';
 import { Categoria } from '../types/producto';
+import { Proveedor } from '../types/proveedor';
 import { Alert } from '../components/ui/Alert';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
@@ -75,6 +78,11 @@ export const ProductoFormPage: React.FC = () => {
     message: string;
   } | null>(null);
 
+  // Estados para la gestión de proveedores
+  const [proveedores, setProveedores] = useState<Proveedor[]>([]);
+  const [selectedProveedores, setSelectedProveedores] = useState<number[]>([]);
+  const [originalProveedores, setOriginalProveedores] = useState<number[]>([]);
+
   const {
     register,
     handleSubmit,
@@ -107,8 +115,12 @@ export const ProductoFormPage: React.FC = () => {
       setIsLoadingData(true);
       setServerError(null);
       try {
-        const cats = await categoriaService.getCategorias();
+        const [cats, provs] = await Promise.all([
+          categoriaService.getCategorias(),
+          proveedorService.getProveedores().catch(() => []),
+        ]);
         setCategorias(cats);
+        setProveedores(provs);
 
         if (isEditing && id) {
           const prod = await productoService.getProductoById(Number(id));
@@ -124,6 +136,12 @@ export const ProductoFormPage: React.FC = () => {
             numeroSerie: prod.numeroSerie || '',
             imagenUrl: prod.imagenUrl || '',
           });
+
+          if (prod.proveedores && prod.proveedores.length > 0) {
+            const provIds = prod.proveedores.map((p) => p.id_Proveedor);
+            setSelectedProveedores(provIds);
+            setOriginalProveedores(provIds);
+          }
 
           if (prod.imagenUrl) {
             setImagePreview(getProductImageUrl(prod.nombre, prod.id_Categoria, prod.imagenUrl));
@@ -152,6 +170,13 @@ export const ProductoFormPage: React.FC = () => {
 
     init();
   }, [id, isEditing, reset]);
+
+  // Manejo de selección/deselección de proveedores
+  const handleToggleProveedor = (provId: number) => {
+    setSelectedProveedores((prev) =>
+      prev.includes(provId) ? prev.filter((pid) => pid !== provId) : [...prev, provId]
+    );
+  };
 
   // Manejo de carga de archivo físico
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -230,6 +255,7 @@ export const ProductoFormPage: React.FC = () => {
         descripcion: data.descripcion || null,
         numeroSerie: data.numeroSerie || null,
         imagenUrl: data.imagenUrl && data.imagenUrl.trim() !== '' ? data.imagenUrl.trim() : null,
+        proveedorIds: selectedProveedores,
       };
 
       if (isEditing && id) {
@@ -513,6 +539,66 @@ export const ProductoFormPage: React.FC = () => {
               error={errors.numeroSerie?.message}
               {...register('numeroSerie')}
             />
+
+            {/* Proveedores Oficiales Asociados (TB_Proveedores y TB_ProveedoresProductos) */}
+            <div className="p-4 bg-slate-50 rounded-xl border border-slate-200 space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Truck className="w-4 h-4 text-blue-600" aria-hidden="true" />
+                  <h2 className="text-xs font-bold text-slate-700 uppercase tracking-wider">
+                    Proveedores Oficiales Asociados
+                  </h2>
+                </div>
+                <span className="text-xs font-semibold text-slate-500">
+                  {selectedProveedores.length} seleccionado{selectedProveedores.length !== 1 ? 's' : ''}
+                </span>
+              </div>
+              <p className="text-xs text-slate-500">
+                Selecciona uno o más proveedores o distribuidores oficiales para este producto.
+              </p>
+
+              {proveedores.length === 0 ? (
+                <p className="text-xs text-slate-400 italic">No hay proveedores registrados en el sistema.</p>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1">
+                  {proveedores.map((prov) => {
+                    const isChecked = selectedProveedores.includes(prov.id_Proveedor);
+                    return (
+                      <label
+                        key={prov.id_Proveedor}
+                        className={`flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-all ${
+                          isChecked
+                            ? 'bg-blue-50/80 border-blue-400 text-slate-900 shadow-xs'
+                            : 'bg-white border-slate-200 text-slate-700 hover:border-slate-300'
+                        }`}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={isChecked}
+                          onChange={() => handleToggleProveedor(prov.id_Proveedor)}
+                          className="mt-1 w-4 h-4 rounded text-blue-600 border-slate-300 focus:ring-blue-500 cursor-pointer"
+                        />
+                        <div className="min-w-0 flex-1">
+                          <p className="text-sm font-bold text-slate-900 leading-snug truncate">
+                            {prov.nombreEmpresa}
+                          </p>
+                          {prov.contacto && (
+                            <p className="text-xs text-slate-500 truncate">
+                              Contacto: {prov.contacto}
+                            </p>
+                          )}
+                          {(prov.telefono || prov.correo) && (
+                            <p className="text-[11px] text-slate-400 truncate">
+                              {prov.telefono || prov.correo}
+                            </p>
+                          )}
+                        </div>
+                      </label>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
 
             {/* Controles de Seguridad y Permisos */}
             <div className="p-4 bg-slate-50 rounded-xl border border-slate-200 space-y-3">

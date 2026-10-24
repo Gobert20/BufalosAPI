@@ -221,5 +221,90 @@ namespace BufalosAPI.Tests
             Assert.True(resJson.TryGetProperty("url", out var urlProp));
             Assert.StartsWith("/uploads/productos/", urlProp.GetString());
         }
+
+        [Fact]
+        public async Task CrearProducto_ConProveedores_AsociaCorrectamente()
+        {
+            // 1. Login Admin
+            var loginAdmin = await _client.PostAsJsonAsync("/api/v1/usuarios/login", new
+            {
+                Correo = "admin@bufalos.cl",
+                Password = "Admin123!"
+            });
+            var json = await loginAdmin.Content.ReadFromJsonAsync<JsonElement>();
+            var token = json.GetProperty("token").GetString();
+
+            // 2. Crear producto asociando proveedores
+            using var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/productos");
+            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+            request.Content = JsonContent.Create(new
+            {
+                Nombre = "Chaleco Táctico Multicam Test",
+                Descripcion = "Chaleco con sistema MOLLE y compartimiento para placas",
+                Precio = 79990m,
+                Stock = 8,
+                Id_Categoria = 1,
+                RestriccionEdad = 0,
+                RequierePermiso = false,
+                SoloPersonalAutorizado = false,
+                NumeroSerie = "CHA-TEST-99",
+                ProveedorIds = new List<int> { 1, 2 }
+            });
+
+            var response = await _client.SendAsync(request);
+            Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+
+            var createdJson = await response.Content.ReadFromJsonAsync<JsonElement>();
+            Assert.True(createdJson.TryGetProperty("proveedores", out var provsProp));
+            Assert.True(provsProp.GetArrayLength() >= 1);
+        }
+
+        [Fact]
+        public async Task BanearUsuario_Y_LoginBaneado_DevuelveHttp403Forbidden()
+        {
+            // 1. Registrar un nuevo usuario para probar baneo
+            var correoTest = $"usuario_ban_{Guid.NewGuid()}@bufalos.cl";
+            var registroRes = await _client.PostAsJsonAsync("/api/v1/usuarios/registro", new
+            {
+                NombreCompleto = "Usuario Sujeto A Baneo",
+                Correo = correoTest,
+                Password = "Password123!",
+                Rol = "Cliente"
+            });
+            Assert.Equal(HttpStatusCode.Created, registroRes.StatusCode);
+            var regJson = await registroRes.Content.ReadFromJsonAsync<JsonElement>();
+            var idUsuario = regJson.GetProperty("id").GetInt32();
+
+            // 2. Login Admin para banearlo
+            var loginAdmin = await _client.PostAsJsonAsync("/api/v1/usuarios/login", new
+            {
+                Correo = "admin@bufalos.cl",
+                Password = "Admin123!"
+            });
+            var adminJson = await loginAdmin.Content.ReadFromJsonAsync<JsonElement>();
+            var adminToken = adminJson.GetProperty("token").GetString();
+
+            // 3. Banear usuario
+            using var banReq = new HttpRequestMessage(HttpMethod.Put, $"/api/v1/usuarios/{idUsuario}/ban");
+            banReq.Headers.Authorization = new AuthenticationHeaderValue("Bearer", adminToken);
+            banReq.Content = JsonContent.Create(new
+            {
+                EsBaneado = true,
+                MotivoBaneo = "Cuenta suspendida por pruebas de seguridad."
+            });
+            var banRes = await _client.SendAsync(banReq);
+            Assert.Equal(HttpStatusCode.OK, banRes.StatusCode);
+
+            // 4. Intentar login con la cuenta baneada -> debe retornar 403 Forbidden
+            var loginBaneado = await _client.PostAsJsonAsync("/api/v1/usuarios/login", new
+            {
+                Correo = correoTest,
+                Password = "Password123!"
+            });
+            Assert.Equal(HttpStatusCode.Forbidden, loginBaneado.StatusCode);
+            var errJson = await loginBaneado.Content.ReadFromJsonAsync<JsonElement>();
+            Assert.True(errJson.TryGetProperty("estaBaneado", out var baneadoProp));
+            Assert.True(baneadoProp.GetBoolean());
+        }
     }
 }

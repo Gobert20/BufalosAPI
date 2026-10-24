@@ -1,4 +1,4 @@
-﻿using BufalosAPI.Data;
+using BufalosAPI.Data;
 using BufalosAPI.Models;
 using Microsoft.EntityFrameworkCore;
 
@@ -10,10 +10,14 @@ namespace BufalosAPI.Endpoints
         {
             var productos = app.MapGroup("/api/v1/productos").WithTags("Productos");
 
-            // GET: Consultar productos con soporte opcional de busqueda y filtro por categoria
+            // GET: Consultar productos con soporte opcional de búsqueda, filtro por categoría y relación de proveedores
             productos.MapGet("/", async (string? q, int? categoriaId, BufalosDbContext db) =>
             {
-                var query = db.Productos.Include(p => p.Categoria).AsQueryable();
+                var query = db.Productos
+                    .Include(p => p.Categoria)
+                    .Include(p => p.ProveedoresProductos)
+                        .ThenInclude(pp => pp.Proveedor)
+                    .AsQueryable();
 
                 if (!string.IsNullOrWhiteSpace(q))
                 {
@@ -27,11 +31,35 @@ namespace BufalosAPI.Endpoints
                     query = query.Where(p => p.Id_Categoria == categoriaId.Value);
                 }
 
-                var lista = await query.OrderBy(p => p.Id_Producto).ToListAsync();
+                var prods = await query.OrderBy(p => p.Id_Producto).ToListAsync();
+                var lista = prods.Select(p => new
+                {
+                    id_Producto = p.Id_Producto,
+                    nombre = p.Nombre,
+                    descripcion = p.Descripcion,
+                    precio = p.Precio,
+                    stock = p.Stock,
+                    id_Categoria = p.Id_Categoria,
+                    restriccionEdad = p.RestriccionEdad,
+                    requierePermiso = p.RequierePermiso,
+                    soloPersonalAutorizado = p.SoloPersonalAutorizado,
+                    numeroSerie = p.NumeroSerie,
+                    imagenUrl = p.ImagenUrl,
+                    categoria = p.Categoria != null ? new { id_Categoria = p.Categoria.Id_Categoria, nombre = p.Categoria.Nombre } : null,
+                    proveedores = p.ProveedoresProductos.Select(pp => new
+                    {
+                        id_Proveedor = pp.Id_Proveedor,
+                        nombreEmpresa = pp.Proveedor != null ? pp.Proveedor.NombreEmpresa : "Proveedor",
+                        contacto = pp.Proveedor?.Contacto,
+                        telefono = pp.Proveedor?.Telefono,
+                        correo = pp.Proveedor?.Correo
+                    }).ToList()
+                }).ToList();
+
                 return Results.Ok(lista);
             });
 
-            // GET: Estadisticas del inventario, ventas y categorias
+            // GET: Estadísticas del inventario, ventas y categorías
             productos.MapGet("/estadisticas", async (BufalosDbContext db) =>
             {
                 var categorias = await db.Categorias.ToListAsync();
@@ -50,7 +78,7 @@ namespace BufalosAPI.Endpoints
                     .Select(g => new
                     {
                         idCategoria = g.Key,
-                        nombre = catDict.ContainsKey(g.Key) ? catDict[g.Key] : $"Categoria {g.Key}",
+                        nombre = catDict.ContainsKey(g.Key) ? catDict[g.Key] : $"Categoría {g.Key}",
                         totalProductos = g.Count(),
                         stockTotal = g.Sum(p => p.Stock),
                         valorInventario = g.Sum(p => p.Precio * p.Stock)
@@ -94,7 +122,7 @@ namespace BufalosAPI.Endpoints
                     })
                     .ToList();
 
-                // Facturacion y transacciones comerciales consolidadas
+                // Facturación y transacciones comerciales consolidadas
                 var totalFacturadoPedidos = await db.Pedidos.SumAsync(p => (decimal?)p.Total) ?? 0m;
                 var totalFacturadoServicios = await db.OrdenesServicio.SumAsync(o => (decimal?)o.CostoTotal) ?? 0m;
                 var totalFacturado = totalFacturadoPedidos + totalFacturadoServicios;
@@ -127,7 +155,7 @@ namespace BufalosAPI.Endpoints
                     .Select(o => new
                     {
                         id = $"SRV-{o.Id_OrdenServicio:D5}",
-                        tipo = o.TipoServicio != null ? o.TipoServicio.Nombre : "Servicio Tecnico",
+                        tipo = o.TipoServicio != null ? o.TipoServicio.Nombre : "Servicio Técnico",
                         cliente = o.Cliente != null ? o.Cliente.NombreCompleto : "Cliente Registrado",
                         fecha = o.FechaIngreso,
                         monto = o.CostoTotal,
@@ -160,13 +188,40 @@ namespace BufalosAPI.Endpoints
                 });
             });
 
-            // GET: Producto por ID
+            // GET: Producto por ID (con Categoría y Proveedores asociados)
             productos.MapGet("/{id:int}", async (int id, BufalosDbContext db) =>
             {
-                var producto = await db.Productos.Include(p => p.Categoria).FirstOrDefaultAsync(p => p.Id_Producto == id);
-                return producto is not null
-                    ? Results.Ok(producto)
-                    : Results.NotFound(new { mensaje = $"Producto con ID {id} no encontrado." });
+                var producto = await db.Productos
+                    .Include(p => p.Categoria)
+                    .Include(p => p.ProveedoresProductos)
+                        .ThenInclude(pp => pp.Proveedor)
+                    .FirstOrDefaultAsync(p => p.Id_Producto == id);
+
+                if (producto is null) return Results.NotFound(new { mensaje = $"Producto con ID {id} no encontrado." });
+
+                return Results.Ok(new
+                {
+                    id_Producto = producto.Id_Producto,
+                    nombre = producto.Nombre,
+                    descripcion = producto.Descripcion,
+                    precio = producto.Precio,
+                    stock = producto.Stock,
+                    id_Categoria = producto.Id_Categoria,
+                    restriccionEdad = producto.RestriccionEdad,
+                    requierePermiso = producto.RequierePermiso,
+                    soloPersonalAutorizado = producto.SoloPersonalAutorizado,
+                    numeroSerie = producto.NumeroSerie,
+                    imagenUrl = producto.ImagenUrl,
+                    categoria = producto.Categoria != null ? new { id_Categoria = producto.Categoria.Id_Categoria, nombre = producto.Categoria.Nombre } : null,
+                    proveedores = producto.ProveedoresProductos.Select(pp => new
+                    {
+                        id_Proveedor = pp.Id_Proveedor,
+                        nombreEmpresa = pp.Proveedor != null ? pp.Proveedor.NombreEmpresa : "Proveedor",
+                        contacto = pp.Proveedor?.Contacto,
+                        telefono = pp.Proveedor?.Telefono,
+                        correo = pp.Proveedor?.Correo
+                    }).ToList()
+                });
             });
 
             // POST: Subir archivo de imagen para productos (requiere rol Admin - OWASP API Security)
@@ -174,32 +229,32 @@ namespace BufalosAPI.Endpoints
             {
                 if (file == null || file.Length == 0)
                 {
-                    return Results.BadRequest(new { error = "Debe proporcionar un archivo de imagen valido." });
+                    return Results.BadRequest(new { error = "Debe proporcionar un archivo de imagen válido." });
                 }
 
-                // 1. Mitigacion OWASP: Limite estricto de tamano (maximo 5 MB)
+                // 1. Mitigación OWASP: Límite estricto de tamaño (máximo 5 MB)
                 const long maxFileSize = 5 * 1024 * 1024;
                 if (file.Length > maxFileSize)
                 {
-                    return Results.BadRequest(new { error = "El archivo excede el tamano maximo permitido de 5 MB." });
+                    return Results.BadRequest(new { error = "El archivo excede el tamaño máximo permitido de 5 MB." });
                 }
 
-                // 2. Mitigacion OWASP: Lista blanca de extensiones de imagen permitidas
+                // 2. Mitigación OWASP: Lista blanca de extensiones de imagen permitidas
                 var allowedExtensions = new[] { ".jpg", ".jpeg", ".png", ".webp", ".gif" };
                 var extension = Path.GetExtension(file.FileName).ToLowerInvariant();
                 if (string.IsNullOrWhiteSpace(extension) || !allowedExtensions.Contains(extension))
                 {
-                    return Results.BadRequest(new { error = "Extension no permitida. Solo se admiten archivos JPG, JPEG, PNG, WEBP y GIF." });
+                    return Results.BadRequest(new { error = "Extensión no permitida. Solo se admiten archivos JPG, JPEG, PNG, WEBP y GIF." });
                 }
 
-                // 3. Mitigacion OWASP: Validacion estricta de Content-Type
+                // 3. Mitigación OWASP: Validación estricta de Content-Type
                 var allowedContentTypes = new[] { "image/jpeg", "image/png", "image/webp", "image/gif" };
                 if (!allowedContentTypes.Contains(file.ContentType.ToLowerInvariant()))
                 {
-                    return Results.BadRequest(new { error = "El tipo de contenido no corresponde a una imagen valida." });
+                    return Results.BadRequest(new { error = "El tipo de contenido no corresponde a una imagen válida." });
                 }
 
-                // 4. Directorio fisico seguro en wwwroot/uploads/productos
+                // 4. Directorio físico seguro en wwwroot/uploads/productos
                 var webRoot = env.WebRootPath;
                 if (string.IsNullOrEmpty(webRoot))
                 {
@@ -211,7 +266,7 @@ namespace BufalosAPI.Endpoints
                     Directory.CreateDirectory(targetDir);
                 }
 
-                // 5. Nombre de archivo desinfectado mediante GUID criptografico para prevenir Directory Traversal (OWASP)
+                // 5. Nombre de archivo desinfectado mediante GUID criptográfico para prevenir Directory Traversal (OWASP)
                 var uniqueFileName = $"{Guid.NewGuid():N}{extension}";
                 var targetPath = Path.Combine(targetDir, uniqueFileName);
 
@@ -242,26 +297,26 @@ namespace BufalosAPI.Endpoints
 
                 if (file == null || file.Length == 0)
                 {
-                    return Results.BadRequest(new { error = "Debe proporcionar un archivo de imagen valido." });
+                    return Results.BadRequest(new { error = "Debe proporcionar un archivo de imagen válido." });
                 }
 
                 const long maxFileSize = 5 * 1024 * 1024;
                 if (file.Length > maxFileSize)
                 {
-                    return Results.BadRequest(new { error = "El archivo excede el tamano maximo permitido de 5 MB." });
+                    return Results.BadRequest(new { error = "El archivo excede el tamaño máximo permitido de 5 MB." });
                 }
 
                 var allowedExtensions = new[] { ".jpg", ".jpeg", ".png", ".webp", ".gif" };
                 var extension = Path.GetExtension(file.FileName).ToLowerInvariant();
                 if (string.IsNullOrWhiteSpace(extension) || !allowedExtensions.Contains(extension))
                 {
-                    return Results.BadRequest(new { error = "Extension no permitida. Solo se admiten archivos JPG, JPEG, PNG, WEBP y GIF." });
+                    return Results.BadRequest(new { error = "Extensión no permitida. Solo se admiten archivos JPG, JPEG, PNG, WEBP y GIF." });
                 }
 
                 var allowedContentTypes = new[] { "image/jpeg", "image/png", "image/webp", "image/gif" };
                 if (!allowedContentTypes.Contains(file.ContentType.ToLowerInvariant()))
                 {
-                    return Results.BadRequest(new { error = "El tipo de contenido no corresponde a una imagen valida." });
+                    return Results.BadRequest(new { error = "El tipo de contenido no corresponde a una imagen válida." });
                 }
 
                 var webRoot = env.WebRootPath ?? Path.Combine(Directory.GetCurrentDirectory(), "wwwroot");
@@ -293,7 +348,7 @@ namespace BufalosAPI.Endpoints
             .RequireAuthorization("AdminOnly")
             .DisableAntiforgery();
 
-            // POST: Crear producto (requiere rol Admin)
+            // POST: Crear producto (requiere rol Admin) con asociación opcional de proveedores
             productos.MapPost("/", async (CreateProductoDto input, BufalosDbContext db) =>
             {
                 if (string.IsNullOrWhiteSpace(input.Nombre))
@@ -314,7 +369,7 @@ namespace BufalosAPI.Endpoints
                 var categoriaExiste = await db.Categorias.AnyAsync(c => c.Id_Categoria == input.Id_Categoria);
                 if (!categoriaExiste)
                 {
-                    return Results.BadRequest(new { error = "La categoria indicada no existe." });
+                    return Results.BadRequest(new { error = "La categoría indicada no existe." });
                 }
 
                 var nuevoProducto = new Producto
@@ -334,14 +389,57 @@ namespace BufalosAPI.Endpoints
                 db.Productos.Add(nuevoProducto);
                 await db.SaveChangesAsync();
 
-                // Cargar la categoria asociada para la respuesta
-                await db.Entry(nuevoProducto).Reference(p => p.Categoria).LoadAsync();
+                // Asociar proveedores si fueron seleccionados
+                if (input.ProveedorIds != null && input.ProveedorIds.Any())
+                {
+                    foreach (var provId in input.ProveedorIds.Distinct())
+                    {
+                        var provExiste = await db.Proveedores.AnyAsync(pr => pr.Id_Proveedor == provId);
+                        if (provExiste)
+                        {
+                            db.ProveedoresProductos.Add(new ProveedorProducto
+                            {
+                                Id_Producto = nuevoProducto.Id_Producto,
+                                Id_Proveedor = provId
+                            });
+                        }
+                    }
+                    await db.SaveChangesAsync();
+                }
 
-                return Results.Created($"/api/v1/productos/{nuevoProducto.Id_Producto}", nuevoProducto);
+                // Cargar datos asociados para respuesta detallada
+                await db.Entry(nuevoProducto).Reference(p => p.Categoria).LoadAsync();
+                await db.Entry(nuevoProducto).Collection(p => p.ProveedoresProductos).Query().Include(pp => pp.Proveedor).LoadAsync();
+
+                var respuesta = new
+                {
+                    id_Producto = nuevoProducto.Id_Producto,
+                    nombre = nuevoProducto.Nombre,
+                    descripcion = nuevoProducto.Descripcion,
+                    precio = nuevoProducto.Precio,
+                    stock = nuevoProducto.Stock,
+                    id_Categoria = nuevoProducto.Id_Categoria,
+                    restriccionEdad = nuevoProducto.RestriccionEdad,
+                    requierePermiso = nuevoProducto.RequierePermiso,
+                    soloPersonalAutorizado = nuevoProducto.SoloPersonalAutorizado,
+                    numeroSerie = nuevoProducto.NumeroSerie,
+                    imagenUrl = nuevoProducto.ImagenUrl,
+                    categoria = nuevoProducto.Categoria != null ? new { id_Categoria = nuevoProducto.Categoria.Id_Categoria, nombre = nuevoProducto.Categoria.Nombre } : null,
+                    proveedores = nuevoProducto.ProveedoresProductos.Select(pp => new
+                    {
+                        id_Proveedor = pp.Id_Proveedor,
+                        nombreEmpresa = pp.Proveedor != null ? pp.Proveedor.NombreEmpresa : "Proveedor",
+                        contacto = pp.Proveedor?.Contacto,
+                        telefono = pp.Proveedor?.Telefono,
+                        correo = pp.Proveedor?.Correo
+                    }).ToList()
+                };
+
+                return Results.Created($"/api/v1/productos/{nuevoProducto.Id_Producto}", respuesta);
             })
             .RequireAuthorization("AdminOnly");
 
-            // PUT: Actualizar producto (requiere rol Admin)
+            // PUT: Actualizar producto (requiere rol Admin) con sincronización de proveedores
             productos.MapPut("/{id:int}", async (int id, UpdateProductoDto input, BufalosDbContext db) =>
             {
                 var producto = await db.Productos.FindAsync(id);
@@ -368,7 +466,7 @@ namespace BufalosAPI.Endpoints
                 var categoriaExiste = await db.Categorias.AnyAsync(c => c.Id_Categoria == input.Id_Categoria);
                 if (!categoriaExiste)
                 {
-                    return Results.BadRequest(new { error = "La categoria indicada no existe." });
+                    return Results.BadRequest(new { error = "La categoría indicada no existe." });
                 }
 
                 producto.Nombre = input.Nombre.Trim();
@@ -382,10 +480,55 @@ namespace BufalosAPI.Endpoints
                 producto.NumeroSerie = input.NumeroSerie?.Trim();
                 producto.ImagenUrl = input.ImagenUrl?.Trim();
 
+                // Sincronizar proveedores si fueron indicados
+                if (input.ProveedorIds != null)
+                {
+                    var existentes = await db.ProveedoresProductos.Where(pp => pp.Id_Producto == id).ToListAsync();
+                    db.ProveedoresProductos.RemoveRange(existentes);
+
+                    foreach (var provId in input.ProveedorIds.Distinct())
+                    {
+                        var provExiste = await db.Proveedores.AnyAsync(pr => pr.Id_Proveedor == provId);
+                        if (provExiste)
+                        {
+                            db.ProveedoresProductos.Add(new ProveedorProducto
+                            {
+                                Id_Producto = id,
+                                Id_Proveedor = provId
+                            });
+                        }
+                    }
+                }
+
                 await db.SaveChangesAsync();
                 await db.Entry(producto).Reference(p => p.Categoria).LoadAsync();
+                await db.Entry(producto).Collection(p => p.ProveedoresProductos).Query().Include(pp => pp.Proveedor).LoadAsync();
 
-                return Results.Ok(producto);
+                var respuesta = new
+                {
+                    id_Producto = producto.Id_Producto,
+                    nombre = producto.Nombre,
+                    descripcion = producto.Descripcion,
+                    precio = producto.Precio,
+                    stock = producto.Stock,
+                    id_Categoria = producto.Id_Categoria,
+                    restriccionEdad = producto.RestriccionEdad,
+                    requierePermiso = producto.RequierePermiso,
+                    soloPersonalAutorizado = producto.SoloPersonalAutorizado,
+                    numeroSerie = producto.NumeroSerie,
+                    imagenUrl = producto.ImagenUrl,
+                    categoria = producto.Categoria != null ? new { id_Categoria = producto.Categoria.Id_Categoria, nombre = producto.Categoria.Nombre } : null,
+                    proveedores = producto.ProveedoresProductos.Select(pp => new
+                    {
+                        id_Proveedor = pp.Id_Proveedor,
+                        nombreEmpresa = pp.Proveedor != null ? pp.Proveedor.NombreEmpresa : "Proveedor",
+                        contacto = pp.Proveedor?.Contacto,
+                        telefono = pp.Proveedor?.Telefono,
+                        correo = pp.Proveedor?.Correo
+                    }).ToList()
+                };
+
+                return Results.Ok(respuesta);
             })
             .RequireAuthorization("AdminOnly");
 
@@ -406,7 +549,7 @@ namespace BufalosAPI.Endpoints
         }
     }
 
-    // DTOs explicitos requeridos para la arquitectura de la API
+    // DTOs explícitos requeridos para la arquitectura de la API
     public record ProductoDto(
         int Id_Producto,
         string Nombre,
@@ -432,7 +575,8 @@ namespace BufalosAPI.Endpoints
         bool RequierePermiso,
         bool SoloPersonalAutorizado,
         string? NumeroSerie,
-        string? ImagenUrl = null
+        string? ImagenUrl = null,
+        List<int>? ProveedorIds = null
     );
 
     public record UpdateProductoDto(
@@ -445,7 +589,8 @@ namespace BufalosAPI.Endpoints
         bool RequierePermiso,
         bool SoloPersonalAutorizado,
         string? NumeroSerie,
-        string? ImagenUrl = null
+        string? ImagenUrl = null,
+        List<int>? ProveedorIds = null
     );
 
     public record ProductoInputDto(
@@ -458,6 +603,7 @@ namespace BufalosAPI.Endpoints
         bool RequierePermiso,
         bool SoloPersonalAutorizado,
         string? NumeroSerie,
-        string? ImagenUrl = null
+        string? ImagenUrl = null,
+        List<int>? ProveedorIds = null
     );
 }

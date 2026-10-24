@@ -525,18 +525,42 @@ namespace BufalosAPI.Data
             // 9. Sembrado de Proveedores-Productos (TB_ProveedoresProductos)
             if (!context.ProveedoresProductos.Any())
             {
-                var prov1 = context.Proveedores.FirstOrDefault();
-                var prods = context.Productos.Take(5).ToList();
-                if (prov1 != null && prods.Any())
+                var provs = context.Proveedores.ToList();
+                var prods = context.Productos.ToList();
+                if (provs.Count >= 3 && prods.Any())
                 {
-                    foreach (var prod in prods)
+                    // Proveedor 1: Suministros Tácticos SpA (Primeros 5 productos de vestuario/accesorios)
+                    foreach (var prod in prods.Take(5))
                     {
                         context.ProveedoresProductos.Add(new ProveedorProducto
                         {
-                            Id_Proveedor = prov1.Id_Proveedor,
+                            Id_Proveedor = provs[0].Id_Proveedor,
                             Id_Producto = prod.Id_Producto
                         });
                     }
+
+                    // Proveedor 2: Importadora Defensiva S.A. (Productos de defensa y airsoft)
+                    var prodsDefensaAirsoft = prods.Where(p => p.Id_Categoria == 3 || p.Id_Categoria == 5).Take(6);
+                    foreach (var prod in prodsDefensaAirsoft)
+                    {
+                        context.ProveedoresProductos.Add(new ProveedorProducto
+                        {
+                            Id_Proveedor = provs[1].Id_Proveedor,
+                            Id_Producto = prod.Id_Producto
+                        });
+                    }
+
+                    // Proveedor 3: Bordados y Textil Ltda. (Parches y textiles)
+                    var prodsParches = prods.Where(p => p.Id_Categoria == 4 || p.Id_Categoria == 1).Skip(2).Take(4);
+                    foreach (var prod in prodsParches)
+                    {
+                        context.ProveedoresProductos.Add(new ProveedorProducto
+                        {
+                            Id_Proveedor = provs[2].Id_Proveedor,
+                            Id_Producto = prod.Id_Producto
+                        });
+                    }
+
                     context.SaveChanges();
                 }
             }

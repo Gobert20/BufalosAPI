@@ -10,6 +10,7 @@ import {
   ShoppingBag,
   Tag,
   Trash2,
+  Truck,
 } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import { productoService } from '../services/productoService';
@@ -276,6 +277,53 @@ export const ProductoDetailPage: React.FC = () => {
                 </span>
               </div>
             </div>
+          </div>
+
+          {/* Proveedores Oficiales (TB_Proveedores y TB_ProveedoresProductos) */}
+          <div className="border-t border-slate-200 pt-6">
+            <div className="flex items-center gap-2 mb-4">
+              <Truck className="w-5 h-5 text-blue-600" aria-hidden="true" />
+              <h2 className="text-base font-bold text-slate-900">
+                Proveedores y Distribuidores Autorizados
+              </h2>
+            </div>
+
+            {producto.proveedores && producto.proveedores.length > 0 ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {producto.proveedores.map((prov) => (
+                  <div
+                    key={prov.id_Proveedor}
+                    className="p-4 rounded-xl border border-slate-200 bg-slate-50/70 hover:bg-slate-50 transition-colors space-y-1.5"
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <h3 className="font-bold text-sm text-slate-900 truncate">
+                        {prov.nombreEmpresa}
+                      </h3>
+                      <Badge variant="blue" size="sm">Oficial</Badge>
+                    </div>
+                    {prov.contacto && (
+                      <p className="text-xs text-slate-600">
+                        <span className="font-semibold text-slate-700">Contacto:</span> {prov.contacto}
+                      </p>
+                    )}
+                    {prov.telefono && (
+                      <p className="text-xs text-slate-600">
+                        <span className="font-semibold text-slate-700">Teléfono:</span> {prov.telefono}
+                      </p>
+                    )}
+                    {prov.correo && (
+                      <p className="text-xs text-slate-600 truncate">
+                        <span className="font-semibold text-slate-700">Correo:</span> {prov.correo}
+                      </p>
+                    )}
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="p-4 rounded-xl border border-dashed border-slate-200 bg-slate-50 text-slate-500 text-sm">
+                Suministro directo / Fabricante interno (sin proveedores intermediarios registrados).
+              </div>
+            )}
           </div>
         </div>
       </article>

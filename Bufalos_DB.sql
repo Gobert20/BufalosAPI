@@ -1,4 +1,4 @@
-CREATE DATABASE Bufalos_DB;
+﻿CREATE DATABASE Bufalos_DB;
 GO
 
 USE Bufalos_DB;
@@ -20,6 +20,8 @@ CREATE TABLE TB_Usuarios (
     Id_Rol INT NOT NULL,
     FechaNacimiento DATE NOT NULL,
     EsVerificado BIT DEFAULT 0,
+    EstaBaneado BIT DEFAULT 0 NOT NULL,
+    MotivoBaneo NVARCHAR(250) NULL,
     FechaCreacion DATETIME2 DEFAULT GETDATE(),
     CONSTRAINT FK_Usuario_Rol FOREIGN KEY (Id_Rol) REFERENCES TB_Roles(Id_Rol)
 );
@@ -341,5 +343,17 @@ GO
 IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('TB_Productos') AND name = 'ImagenUrl')
 BEGIN
     ALTER TABLE TB_Productos ADD ImagenUrl NVARCHAR(500) NULL;
+END
+GO
+
+
+-- Migración automática: Agregar EstaBaneado y MotivoBaneo a TB_Usuarios si no existen
+IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('TB_Usuarios') AND name = 'EstaBaneado')
+BEGIN
+    ALTER TABLE TB_Usuarios ADD EstaBaneado BIT DEFAULT 0 NOT NULL;
+END
+IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('TB_Usuarios') AND name = 'MotivoBaneo')
+BEGIN
+    ALTER TABLE TB_Usuarios ADD MotivoBaneo NVARCHAR(250) NULL;
 END
 GO

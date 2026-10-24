@@ -86,6 +86,7 @@ namespace BufalosAPI.Endpoints
                         ? req.FechaNacimiento.Value
                         : DateTime.UtcNow.AddYears(-20),
                     EsVerificado = req.EsVerificado ?? true,
+                    EstaBaneado = false,
                     FechaCreacion = DateTime.UtcNow
                 };
 
@@ -100,6 +101,7 @@ namespace BufalosAPI.Endpoints
                 return Results.Created($"/api/v1/usuarios/{nuevoUsuario.Id_Usuario}", new
                 {
                     id = nuevoUsuario.Id_Usuario,
+                    id_Usuario = nuevoUsuario.Id_Usuario,
                     nombre = nuevoUsuario.NombreCompleto,
                     correo = nuevoUsuario.Correo,
                     rol = rolNormalizado,
@@ -122,6 +124,17 @@ namespace BufalosAPI.Endpoints
                 if (usuario is null || !auth.VerifyPassword(login.Password, usuario.ContrasenaHash))
                 {
                     return Results.Unauthorized();
+                }
+
+                // Verificar si el usuario está baneado
+                if (usuario.EstaBaneado)
+                {
+                    return Results.Json(new
+                    {
+                        error = "Tu cuenta ha sido suspendida/baneada y no puede iniciar sesión.",
+                        motivo = usuario.MotivoBaneo ?? "Infracción de términos de servicio o políticas de seguridad.",
+                        estaBaneado = true
+                    }, statusCode: 403);
                 }
 
                 var rolDb = usuario.Rol?.Nombre ?? "Cliente";
@@ -160,6 +173,7 @@ namespace BufalosAPI.Endpoints
                     usuario = new
                     {
                         id = usuario.Id_Usuario,
+                        id_Usuario = usuario.Id_Usuario,
                         nombreCompleto = usuario.NombreCompleto,
                         correo = usuario.Correo,
                         rol = rolNormalizado
@@ -167,6 +181,155 @@ namespace BufalosAPI.Endpoints
                 });
             })
             .RequireRateLimiting("login-limiter");
+
+            // ─────────────────────────────────────────────────────────────────────
+            // ENDPOINTS ADMIN — Gestión de usuarios y permisos
+            // ─────────────────────────────────────────────────────────────────────
+
+            // GET /api/v1/usuarios — Listado completo de usuarios (Admin)
+            usuarios.MapGet("/", async (BufalosDbContext db) =>
+            {
+                var lista = await db.Usuarios
+                    .Include(u => u.Rol)
+                    .Include(u => u.Permisos)
+                    .OrderBy(u => u.Id_Usuario)
+                    .Select(u => new
+                    {
+                        id = u.Id_Usuario,
+                        id_Usuario = u.Id_Usuario,
+                        nombreCompleto = u.NombreCompleto,
+                        correo = u.Correo,
+                        rol = u.Rol != null ? u.Rol.Nombre : "Sin Rol",
+                        esVerificado = u.EsVerificado,
+                        estaBaneado = u.EstaBaneado,
+                        motivoBaneo = u.MotivoBaneo,
+                        fechaCreacion = u.FechaCreacion,
+                        cantidadPermisos = u.Permisos.Count
+                    })
+                    .ToListAsync();
+
+                return Results.Ok(lista);
+            })
+            .RequireAuthorization("AdminOnly");
+
+            // GET /api/v1/usuarios/{id} — Detalle de usuario con permisos (Admin)
+            usuarios.MapGet("/{id:int}", async (int id, BufalosDbContext db) =>
+            {
+                var usuario = await db.Usuarios
+                    .Include(u => u.Rol)
+                    .Include(u => u.Permisos)
+                    .FirstOrDefaultAsync(u => u.Id_Usuario == id);
+
+                if (usuario is null)
+                    return Results.NotFound(new { mensaje = $"Usuario con ID {id} no encontrado." });
+
+                return Results.Ok(new
+                {
+                    id = usuario.Id_Usuario,
+                    id_Usuario = usuario.Id_Usuario,
+                    nombreCompleto = usuario.NombreCompleto,
+                    correo = usuario.Correo,
+                    rol = usuario.Rol != null ? usuario.Rol.Nombre : "Sin Rol",
+                    esVerificado = usuario.EsVerificado,
+                    estaBaneado = usuario.EstaBaneado,
+                    motivoBaneo = usuario.MotivoBaneo,
+                    fechaCreacion = usuario.FechaCreacion,
+                    cantidadPermisos = usuario.Permisos.Count,
+                    permisos = usuario.Permisos.Select(p => new
+                    {
+                        id_Permiso = p.Id_Permiso,
+                        id_Usuario = p.Id_Usuario,
+                        tipoPermiso = p.TipoPermiso,
+                        numeroDocumento = p.NumeroDocumento,
+                        fechaExpiracion = p.FechaExpiracion,
+                        estado = p.Estado
+                    }).ToList()
+                });
+            })
+            .RequireAuthorization("AdminOnly");
+
+            // PUT /api/v1/usuarios/{id}/ban — Banear o desbanear usuario (Admin)
+            usuarios.MapPut("/{id:int}/ban", async (int id, BanRequest req, BufalosDbContext db) =>
+            {
+                var usuario = await db.Usuarios.FindAsync(id);
+                if (usuario is null)
+                    return Results.NotFound(new { mensaje = $"Usuario con ID {id} no encontrado." });
+
+                usuario.EstaBaneado = req.EsBaneado;
+                usuario.MotivoBaneo = req.EsBaneado ? req.MotivoBaneo : null;
+                await db.SaveChangesAsync();
+
+                return Results.Ok(new
+                {
+                    id = usuario.Id_Usuario,
+                    id_Usuario = usuario.Id_Usuario,
+                    nombreCompleto = usuario.NombreCompleto,
+                    estaBaneado = usuario.EstaBaneado,
+                    motivoBaneo = usuario.MotivoBaneo,
+                    mensaje = req.EsBaneado ? "Usuario baneado exitosamente." : "Baneo del usuario levantado exitosamente."
+                });
+            })
+            .RequireAuthorization("AdminOnly");
+
+            // Helper para otorgar permiso especial
+            async Task<IResult> AgregarPermisoEspecial(int id, PermisoEspecialRequest req, BufalosDbContext db)
+            {
+                var usuario = await db.Usuarios.FindAsync(id);
+                if (usuario is null)
+                    return Results.NotFound(new { mensaje = $"Usuario con ID {id} no encontrado." });
+
+                var permiso = new PermisoUsuario
+                {
+                    Id_Usuario = id,
+                    TipoPermiso = req.TipoPermiso.Trim(),
+                    NumeroDocumento = req.NumeroDocumento.Trim(),
+                    FechaExpiracion = req.FechaExpiracion,
+                    Estado = string.IsNullOrWhiteSpace(req.Estado) ? "Aprobado" : req.Estado.Trim()
+                };
+
+                db.PermisosUsuarios.Add(permiso);
+                await db.SaveChangesAsync();
+
+                return Results.Created($"/api/v1/usuarios/{id}/permisos/{permiso.Id_Permiso}", new
+                {
+                    id_Permiso = permiso.Id_Permiso,
+                    id_Usuario = permiso.Id_Usuario,
+                    tipoPermiso = permiso.TipoPermiso,
+                    numeroDocumento = permiso.NumeroDocumento,
+                    fechaExpiracion = permiso.FechaExpiracion,
+                    estado = permiso.Estado
+                });
+            }
+
+            // POST /api/v1/usuarios/{id}/permisos-especiales — Otorgar permiso especial (Admin)
+            usuarios.MapPost("/{id:int}/permisos-especiales", async (int id, PermisoEspecialRequest req, BufalosDbContext db) =>
+            {
+                return await AgregarPermisoEspecial(id, req, db);
+            })
+            .RequireAuthorization("AdminOnly");
+
+            // PUT /api/v1/usuarios/{id}/permisos-especiales — Compatibilidad PUT para otorgar permiso especial
+            usuarios.MapPut("/{id:int}/permisos-especiales", async (int id, PermisoEspecialRequest req, BufalosDbContext db) =>
+            {
+                return await AgregarPermisoEspecial(id, req, db);
+            })
+            .RequireAuthorization("AdminOnly");
+
+            // DELETE /api/v1/usuarios/{id}/permisos/{permisoId} — Eliminar/Revocar permiso específico (Admin)
+            usuarios.MapDelete("/{id:int}/permisos/{permisoId:int}", async (int id, int permisoId, BufalosDbContext db) =>
+            {
+                var permiso = await db.PermisosUsuarios
+                    .FirstOrDefaultAsync(p => p.Id_Permiso == permisoId && p.Id_Usuario == id);
+
+                if (permiso is null)
+                    return Results.NotFound(new { mensaje = $"Permiso con ID {permisoId} no encontrado para el usuario {id}." });
+
+                db.PermisosUsuarios.Remove(permiso);
+                await db.SaveChangesAsync();
+
+                return Results.NoContent();
+            })
+            .RequireAuthorization("AdminOnly");
         }
 
         public record RegistroRequest(
@@ -180,5 +343,14 @@ namespace BufalosAPI.Endpoints
         );
 
         public record LoginRequest(string Correo, string Password);
+
+        public record BanRequest(bool EsBaneado, string? MotivoBaneo);
+
+        public record PermisoEspecialRequest(
+            string TipoPermiso,
+            string NumeroDocumento,
+            DateTime FechaExpiracion,
+            string Estado
+        );
     }
 }

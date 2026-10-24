@@ -3,6 +3,14 @@ export interface Categoria {
   nombre: string;
 }
 
+export interface ProveedorSimple {
+  id_Proveedor: number;
+  nombreEmpresa: string;
+  contacto?: string | null;
+  telefono?: string | null;
+  correo?: string | null;
+}
+
 export interface Producto {
   id_Producto: number;
   nombre: string;
@@ -16,6 +24,7 @@ export interface Producto {
   numeroSerie: string | null;
   imagenUrl?: string | null;
   categoria?: Categoria | null;
+  proveedores?: ProveedorSimple[];
 }
 
 export interface ProductoInput {
@@ -29,6 +38,7 @@ export interface ProductoInput {
   soloPersonalAutorizado: boolean;
   numeroSerie?: string | null;
   imagenUrl?: string | null;
+  proveedorIds?: number[];
 }
 
 export interface CategoriaEstadistica {

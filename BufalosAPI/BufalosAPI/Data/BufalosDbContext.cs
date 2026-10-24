@@ -36,7 +36,10 @@ namespace BufalosAPI.Data
             {
                 e.ToTable("TB_Usuarios");
                 e.HasKey(u => u.Id_Usuario);
+                e.Property(u => u.EstaBaneado).HasDefaultValue(false);
+                e.Property(u => u.MotivoBaneo).HasMaxLength(250).IsRequired(false);
                 e.HasOne(u => u.Rol).WithMany().HasForeignKey(u => u.Id_Rol);
+                e.HasMany(u => u.Permisos).WithOne(p => p.Usuario).HasForeignKey(p => p.Id_Usuario).OnDelete(DeleteBehavior.Cascade);
             });
 
             // Mapeo TB_PermisosUsuarios
@@ -44,7 +47,6 @@ namespace BufalosAPI.Data
             {
                 e.ToTable("TB_PermisosUsuarios");
                 e.HasKey(p => p.Id_Permiso);
-                e.HasOne(p => p.Usuario).WithMany().HasForeignKey(p => p.Id_Usuario).OnDelete(DeleteBehavior.Cascade);
             });
 
             // Mapeo TB_Proveedores
@@ -77,7 +79,7 @@ namespace BufalosAPI.Data
                 e.ToTable("TB_ProveedoresProductos");
                 e.HasKey(pp => new { pp.Id_Proveedor, pp.Id_Producto });
                 e.HasOne(pp => pp.Proveedor).WithMany(p => p.ProveedoresProductos).HasForeignKey(pp => pp.Id_Proveedor);
-                e.HasOne(pp => pp.Producto).WithMany().HasForeignKey(pp => pp.Id_Producto).OnDelete(DeleteBehavior.Cascade);
+                e.HasOne(pp => pp.Producto).WithMany(p => p.ProveedoresProductos).HasForeignKey(pp => pp.Id_Producto).OnDelete(DeleteBehavior.Cascade);
             });
 
             // Mapeo TB_Pedidos

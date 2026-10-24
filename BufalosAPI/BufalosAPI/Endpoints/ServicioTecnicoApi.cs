@@ -20,33 +20,44 @@ namespace BufalosAPI.Endpoints
             // GET: Listado de órdenes de servicio técnico para Panel Técnico y Admin
             servicios.MapGet("/", async (BufalosDbContext db) =>
             {
-                var listado = await db.OrdenesServicio
+                var ordenes = await db.OrdenesServicio
                     .Include(o => o.Cliente)
                     .Include(o => o.TecnicoAsignado)
                     .Include(o => o.TipoServicio)
                     .OrderByDescending(o => o.FechaIngreso)
-                    .Select(o => new
-                    {
-                        id_OrdenServicio = o.Id_OrdenServicio,
-                        id_Cliente = o.Id_Cliente,
-                        clienteNombre = o.Cliente != null ? o.Cliente.NombreCompleto : "Cliente General",
-                        clienteCorreo = o.Cliente != null ? o.Cliente.Correo : "",
-                        id_TecnicoAsignado = o.Id_TecnicoAsignado,
-                        tecnicoNombre = o.TecnicoAsignado != null ? o.TecnicoAsignado.NombreCompleto : "Sin Asignar",
-                        id_TipoServicio = o.Id_TipoServicio,
-                        tipoServicioNombre = o.TipoServicio != null ? o.TipoServicio.Nombre : "Servicio General",
-                        fechaIngreso = o.FechaIngreso,
-                        fechaEstimadaEntrega = o.FechaEstimadaEntrega,
-                        estado = o.Estado,
-                        descripcionProblemaOrItem = o.DescripcionProblemaOrItem,
-                        costoTotal = o.CostoTotal
-                    })
                     .ToListAsync();
+
+                var listado = ordenes.Select(o => new
+                {
+                    id_OrdenServicio = o.Id_OrdenServicio,
+                    id_Cliente = o.Id_Cliente,
+                    clienteNombre = o.Cliente != null ? o.Cliente.NombreCompleto : "Cliente General",
+                    clienteCorreo = o.Cliente != null ? o.Cliente.Correo : "",
+                    id_TecnicoAsignado = o.Id_TecnicoAsignado,
+                    tecnicoNombre = o.TecnicoAsignado != null ? o.TecnicoAsignado.NombreCompleto : "Sin Asignar",
+                    id_TipoServicio = o.Id_TipoServicio,
+                    tipoServicioNombre = o.TipoServicio != null ? o.TipoServicio.Nombre : "Servicio General",
+                    fechaIngreso = o.FechaIngreso,
+                    fechaEstimadaEntrega = o.FechaEstimadaEntrega,
+                    estado = o.Estado,
+                    descripcionProblemaOrItem = o.DescripcionProblemaOrItem,
+                    costoTotal = o.CostoTotal,
+                    detalleParche = db.DetallesParchesCustom
+                        .Where(dp => dp.Id_OrdenServicio == o.Id_OrdenServicio)
+                        .Select(dp => new
+                        {
+                            textoPersonalizado = dp.TextoPersonalizado,
+                            dimensiones = dp.Dimensiones,
+                            tipoBordado = dp.TipoBordado,
+                            cantidad = dp.Cantidad,
+                            observacionesDiseno = dp.ObservacionesDiseno
+                        }).FirstOrDefault()
+                }).ToList();
 
                 return Results.Ok(listado);
             });
 
-            // GET: Mis Servicios Técnicos (Historial para el Cliente autenticado)
+            // GET: Mis Servicios Técnicos (Historial detallado para el Cliente autenticado)
             servicios.MapGet("/mis-servicios", async (int? idUsuario, string? correo, BufalosDbContext db) =>
             {
                 var query = db.OrdenesServicio
@@ -65,25 +76,36 @@ namespace BufalosAPI.Endpoints
                     query = query.Where(o => o.Cliente != null && o.Cliente.Correo.ToLower() == cLimpio);
                 }
 
-                var listado = await query
+                var ordenes = await query
                     .OrderByDescending(o => o.FechaIngreso)
-                    .Select(o => new
-                    {
-                        id_OrdenServicio = o.Id_OrdenServicio,
-                        id_Cliente = o.Id_Cliente,
-                        clienteNombre = o.Cliente != null ? o.Cliente.NombreCompleto : "Cliente",
-                        clienteCorreo = o.Cliente != null ? o.Cliente.Correo : "",
-                        id_TecnicoAsignado = o.Id_TecnicoAsignado,
-                        tecnicoNombre = o.TecnicoAsignado != null ? o.TecnicoAsignado.NombreCompleto : "En asignación",
-                        id_TipoServicio = o.Id_TipoServicio,
-                        tipoServicioNombre = o.TipoServicio != null ? o.TipoServicio.Nombre : "Servicio Técnico",
-                        fechaIngreso = o.FechaIngreso,
-                        fechaEstimadaEntrega = o.FechaEstimadaEntrega,
-                        estado = o.Estado,
-                        descripcionProblemaOrItem = o.DescripcionProblemaOrItem,
-                        costoTotal = o.CostoTotal
-                    })
                     .ToListAsync();
+
+                var listado = ordenes.Select(o => new
+                {
+                    id_OrdenServicio = o.Id_OrdenServicio,
+                    id_Cliente = o.Id_Cliente,
+                    clienteNombre = o.Cliente != null ? o.Cliente.NombreCompleto : "Cliente",
+                    clienteCorreo = o.Cliente != null ? o.Cliente.Correo : "",
+                    id_TecnicoAsignado = o.Id_TecnicoAsignado,
+                    tecnicoNombre = o.TecnicoAsignado != null ? o.TecnicoAsignado.NombreCompleto : "En asignación",
+                    id_TipoServicio = o.Id_TipoServicio,
+                    tipoServicioNombre = o.TipoServicio != null ? o.TipoServicio.Nombre : "Servicio Técnico",
+                    fechaIngreso = o.FechaIngreso,
+                    fechaEstimadaEntrega = o.FechaEstimadaEntrega,
+                    estado = o.Estado,
+                    descripcionProblemaOrItem = o.DescripcionProblemaOrItem,
+                    costoTotal = o.CostoTotal,
+                    detalleParche = db.DetallesParchesCustom
+                        .Where(dp => dp.Id_OrdenServicio == o.Id_OrdenServicio)
+                        .Select(dp => new
+                        {
+                            textoPersonalizado = dp.TextoPersonalizado,
+                            dimensiones = dp.Dimensiones,
+                            tipoBordado = dp.TipoBordado,
+                            cantidad = dp.Cantidad,
+                            observacionesDiseno = dp.ObservacionesDiseno
+                        }).FirstOrDefault()
+                }).ToList();
 
                 return Results.Ok(listado);
             });

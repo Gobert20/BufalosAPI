@@ -5,6 +5,14 @@ export interface TipoServicio {
   tiempoEstimadoDias: number;
 }
 
+export interface DetalleParcheCustomDto {
+  textoPersonalizado?: string | null;
+  dimensiones?: string | null;
+  tipoBordado?: string | null;
+  cantidad?: number;
+  observacionesDiseno?: string | null;
+}
+
 export interface OrdenServicio {
   id_OrdenServicio: number;
   id_Cliente: number;
@@ -19,6 +27,7 @@ export interface OrdenServicio {
   estado: string;
   descripcionProblemaOrItem: string;
   costoTotal: number;
+  detalleParche?: DetalleParcheCustomDto | null;
 }
 
 export interface CrearOrdenServicioRequest {
