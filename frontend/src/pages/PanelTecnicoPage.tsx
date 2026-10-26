@@ -509,6 +509,11 @@ export const PanelTecnicoPage: React.FC = () => {
                         <td className="p-3">
                           <span className="font-bold text-slate-900 block">{s.tipoServicioNombre}</span>
                           <span className="text-xs text-slate-500">Técnico: {s.tecnicoNombre}</span>
+                          {s.detalleParche && (
+                            <div className="mt-1.5 p-1.5 bg-purple-50 rounded border border-purple-200 text-[11px] text-purple-900 leading-tight">
+                              <span className="font-bold">Parche:</span> {s.detalleParche.textoPersonalizado || 'Custom'} ({s.detalleParche.dimensiones || '8x5 cm'}, {s.detalleParche.tipoBordado || 'Velcro'}) x{s.detalleParche.cantidad || 1}
+                            </div>
+                          )}
                         </td>
 
                         <td className="p-3 max-w-xs">

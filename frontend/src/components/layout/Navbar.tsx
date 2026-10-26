@@ -10,6 +10,7 @@ import {
   Shield,
   ShoppingBag,
   User as UserIcon,
+  Users,
   Wrench,
   X,
 } from 'lucide-react';
@@ -126,6 +127,21 @@ export const Navbar: React.FC = () => {
                 >
                   <Wrench className="w-4 h-4 text-amber-400" aria-hidden="true" />
                   Panel Técnico
+                </Link>
+              )}
+
+              {/* Panel de Usuarios y Permisos: Exclusivo Admin */}
+              {isAdmin && (
+                <Link
+                  to="/admin/usuarios"
+                  className={`flex items-center gap-2 px-3 py-2 rounded-md text-sm font-semibold transition-colors min-h-[44px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400 ${
+                    isActive('/admin/usuarios')
+                      ? 'bg-blue-600 text-white shadow-xs'
+                      : 'text-slate-300 hover:text-white hover:bg-slate-800'
+                  }`}
+                >
+                  <Users className="w-4 h-4 text-purple-400" aria-hidden="true" />
+                  Usuarios y Permisos
                 </Link>
               )}
 
@@ -266,16 +282,29 @@ export const Navbar: React.FC = () => {
             )}
 
             {isAdmin && (
-              <Link
-                to="/productos/nuevo"
-                onClick={() => setMobileMenuOpen(false)}
-                className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-base font-semibold min-h-[44px] ${
-                  isActive('/productos/nuevo') ? 'bg-blue-600 text-white' : 'text-slate-300 hover:bg-slate-800'
-                }`}
-              >
-                <PlusCircle className="w-5 h-5 text-emerald-400" aria-hidden="true" />
-                Nuevo Producto
-              </Link>
+              <>
+                <Link
+                  to="/admin/usuarios"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-base font-semibold min-h-[44px] ${
+                    isActive('/admin/usuarios') ? 'bg-blue-600 text-white' : 'text-slate-300 hover:bg-slate-800'
+                  }`}
+                >
+                  <Users className="w-5 h-5 text-purple-400" aria-hidden="true" />
+                  Usuarios y Permisos
+                </Link>
+
+                <Link
+                  to="/productos/nuevo"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-base font-semibold min-h-[44px] ${
+                    isActive('/productos/nuevo') ? 'bg-blue-600 text-white' : 'text-slate-300 hover:bg-slate-800'
+                  }`}
+                >
+                  <PlusCircle className="w-5 h-5 text-emerald-400" aria-hidden="true" />
+                  Nuevo Producto
+                </Link>
+              </>
             )}
           </div>
 

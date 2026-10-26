@@ -145,6 +145,8 @@ export const LoginPage: React.FC = () => {
         setServerError(
           'Demasiados intentos fallidos en poco tiempo (429 Too Many Requests). Por seguridad, espere 1 minuto antes de reintentar.'
         );
+      } else if (apiErr.status === 403) {
+        setServerError(apiErr.message || 'Su cuenta ha sido suspendida/baneada. Contacte al administrador.');
       } else if (apiErr.status === 401) {
         setServerError('Credenciales incorrectas. Verifique el correo y la contraseña ingresados.');
       } else {

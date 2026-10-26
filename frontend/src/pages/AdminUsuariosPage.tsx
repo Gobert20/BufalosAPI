@@ -310,16 +310,30 @@ const PermisosModal: React.FC<PermisosModalProps> = ({ usuario, onClose, onSaved
             </h3>
             <div className="space-y-2">
               <label htmlFor="tipo-permiso" className="block text-xs font-semibold text-slate-600">
-                Tipo de Permiso
+                Tipo de Permiso / Autorización
               </label>
-              <input
+              <select
                 id="tipo-permiso"
-                type="text"
                 value={tipoPermiso}
                 onChange={(e) => setTipoPermiso(e.target.value)}
-                placeholder="Ej: DGMN, CNI, etc."
-                className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              />
+                className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm text-slate-800 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              >
+                <option value="">-- Seleccionar Permiso Especial --</option>
+                <option value="Acreditación Balística y Defensa">Acreditación Balística y Defensa (Fuerzas de Orden)</option>
+                <option value="Mayor de 18 años (Verificación de Edad)">Mayor de 18 años (Verificación de Edad / Restricción)</option>
+                <option value="Personal Autorizado (Fuerzas de Orden y Seguridad)">Personal Autorizado (Fuerzas de Orden y Seguridad)</option>
+                <option value="Licencia de Armero y Distribuidor">Licencia de Armero y Distribuidor</option>
+                <option value="Permiso de Coleccionista y Replicas Airsoft">Permiso de Coleccionista y Réplicas Airsoft</option>
+                <option value="Otro">Otro Permiso Oficial</option>
+              </select>
+              {tipoPermiso === 'Otro' && (
+                <input
+                  type="text"
+                  placeholder="Escriba el nombre del permiso..."
+                  onChange={(e) => setTipoPermiso(e.target.value)}
+                  className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm text-slate-800 placeholder-slate-400 mt-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                />
+              )}
             </div>
             <div className="space-y-2">
               <label htmlFor="num-documento" className="block text-xs font-semibold text-slate-600">

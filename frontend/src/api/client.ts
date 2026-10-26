@@ -26,29 +26,36 @@ apiClient.interceptors.request.use(
 // Interceptor de respuestas: Normalización de errores y gestión de sesión
 apiClient.interceptors.response.use(
   (response) => response,
-  (error: AxiosError<{ message?: string; error?: string; errors?: Record<string, string[]>; detail?: string }>) => {
+  (error: AxiosError<{ message?: string; error?: string; errors?: Record<string, string[]>; detail?: string; motivo?: string; estaBaneado?: boolean }>) => {
     const status = error.response?.status || 500;
     let message = 'Error de conexión con el servidor. Verifique si la API está en ejecución.';
 
     if (error.response?.data) {
       const data = error.response.data;
-      message = data.message || data.error || data.detail || message;
+      if (data.estaBaneado || (status === 403 && data.motivo)) {
+        message = data.motivo
+          ? `Su cuenta ha sido suspendida/baneada. Motivo: ${data.motivo}`
+          : (data.error || 'Su cuenta ha sido suspendida/baneada.');
+      } else {
+        message = data.error || data.message || data.detail || message;
+      }
     }
 
     if (status === 401) {
-      message = 'Sesión no autorizada o token expirado. Por favor, inicie sesión nuevamente.';
+      message = error.response?.data?.error || error.response?.data?.message || 'Sesión no autorizada o credenciales incorrectas.';
       // Limpiar credenciales caducadas
       sessionStorage.removeItem('bufalos_auth_token');
       sessionStorage.removeItem('bufalos_auth_user');
       localStorage.removeItem('bufalos_auth_token');
       localStorage.removeItem('bufalos_auth_user');
 
-      // Si no estamos ya en la página de login, disparar evento o redirección controlada
       if (typeof window !== 'undefined' && !window.location.pathname.includes('/login')) {
         window.dispatchEvent(new CustomEvent('bufalos:unauthorized'));
       }
     } else if (status === 403) {
-      message = 'Acceso denegado: Su rol no cuenta con los permisos necesarios para realizar esta acción.';
+      if (!error.response?.data?.error && !error.response?.data?.message && !error.response?.data?.motivo) {
+        message = 'Acceso denegado: Su cuenta no cuenta con las autorizaciones o permisos requeridos.';
+      }
     } else if (status === 429) {
       message = 'Límite de solicitudes alcanzado (Rate Limit). Por favor espere 1 minuto antes de reintentar.';
     }

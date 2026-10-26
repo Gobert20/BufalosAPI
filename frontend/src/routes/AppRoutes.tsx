@@ -10,6 +10,7 @@ import { EstadisticasPage } from '../pages/EstadisticasPage';
 import { PanelTecnicoPage } from '../pages/PanelTecnicoPage';
 import { MisPedidosPage } from '../pages/MisPedidosPage';
 import { ServicioClientePage } from '../pages/ServicioClientePage';
+import { AdminUsuariosPage } from '../pages/AdminUsuariosPage';
 import { ForbiddenPage } from '../pages/ForbiddenPage';
 import { NotFoundPage } from '../pages/NotFoundPage';
 
@@ -68,6 +69,14 @@ export const AppRoutes: React.FC = () => {
         />
 
         {/* Rutas protegidas: Solo rol Admin */}
+        <Route
+          path="admin/usuarios"
+          element={
+            <ProtectedRoute requiredRole="Admin">
+              <AdminUsuariosPage />
+            </ProtectedRoute>
+          }
+        />
         <Route
           path="productos/nuevo"
           element={
